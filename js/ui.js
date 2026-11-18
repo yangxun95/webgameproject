@@ -1,6 +1,29 @@
 import {
+  GAME_WIDTH,
   GAME_HEIGHT,
+  GAME_TITLE,
+  GAME_SUBTITLE,
   WEAPONS,
+  HUD_HP_BAR_WIDTH,
+  HUD_HP_BAR_HEIGHT,
+  HUD_HP_COLOR,
+  HUD_HP_LOW_COLOR,
+  HUD_HP_LOW_RATIO,
+  HUD_ARMOR_COLOR,
+  HUD_ADRENALINE_COLOR,
+  HUD_POWER_AMMO_COLOR,
+  HUD_STAGE_PANEL_WIDTH,
+  BOSS_COLOR,
+  MESSAGE_BG_COLOR,
+  MESSAGE_TEXT_COLOR,
+  MENU_OVERLAY_COLOR,
+  MENU_TITLE_COLOR,
+  MENU_TEXT_COLOR,
+  MENU_SUBTEXT_COLOR,
+  MENU_BLINK_PERIOD,
+  NEW_RECORD_COLOR,
+  GAME_OVER_OVERLAY_COLOR,
+  GAME_OVER_TEXT_COLOR,
   HUD_MARGIN,
   HUD_SLOT_SIZE,
   HUD_SLOT_GAP,
@@ -14,10 +37,218 @@ import {
   HUD_SLOT_SELECTED_COLOR,
   HUD_RELOAD_COLOR,
   HUD_SPIN_COLOR,
+  MAX_ARMOR,
 } from './config.js';
 
-// HUD（抬頭顯示）：畫在遊戲畫面最上層的資訊 (heads-up display)
-// 目前只有左下角的武器資訊，第 9 步會加上血量、關卡數等。
+// HUD（抬頭顯示）與選單畫面：畫在遊戲畫面最上層的資訊 (heads-up display & screens)
+//   左上：血量、護甲、暫時效果　右上：關卡、剩餘敵人、最高紀錄　左下：武器
+//   另外還有：畫面中央提示、主選單、死亡畫面
+
+/**
+ * 設定文字樣式的小幫手，省得每次寫三行 (helper to set text style)
+ * @param {CanvasRenderingContext2D} ctx 畫筆
+ * @param {string} font 字型，例如 'bold 16px sans-serif'
+ * @param {string} align 水平對齊：'left'、'center'、'right'
+ * @param {string} baseline 垂直對齊：'top'、'middle'、'bottom'
+ */
+function setText(ctx, font, align, baseline) {
+  ctx.font = font;
+  ctx.textAlign = align;
+  ctx.textBaseline = baseline;
+}
+
+// ===== 左上：血量與效果 (top-left: HP & buffs) =====
+
+/**
+ * 左上角的玩家狀態：血條、護甲條、暫時效果剩餘秒數 (player status panel)
+ * @param {CanvasRenderingContext2D} ctx 畫筆
+ * @param {Player} player 玩家
+ */
+export function drawStatusHud(ctx, player) {
+  const left = HUD_MARGIN;
+  let y = HUD_MARGIN;   // 由上往下排，每畫一行就往下移 (stack rows downward)
+
+  // 先算出要畫幾行，才知道底板多高 (count rows to size the panel)
+  const buffs = [];
+  if (player.speedBuffTimer > 0) {
+    buffs.push({ text: `腎上腺素 ${Math.ceil(player.speedBuffTimer)}s`, color: HUD_ADRENALINE_COLOR });
+  }
+  if (player.damageBuffTimer > 0) {
+    buffs.push({ text: `強化彈藥 ${Math.ceil(player.damageBuffTimer)}s`, color: HUD_POWER_AMMO_COLOR });
+  }
+  const panelHeight = 24 + (player.armor > 0 ? 10 : 0) + buffs.length * 18;
+
+  ctx.fillStyle = HUD_BG_COLOR;
+  ctx.fillRect(left - 6, y - 6, HUD_HP_BAR_WIDTH + 12, panelHeight + 12);
+
+  // ----- 血條：低血量時變紅 (HP bar, red when low) -----
+  const hpRatio = player.hp / player.maxHp;
+  ctx.fillStyle = HUD_SLOT_EMPTY_COLOR;
+  ctx.fillRect(left, y, HUD_HP_BAR_WIDTH, HUD_HP_BAR_HEIGHT);
+  ctx.fillStyle = hpRatio < HUD_HP_LOW_RATIO ? HUD_HP_LOW_COLOR : HUD_HP_COLOR;
+  ctx.fillRect(left, y, HUD_HP_BAR_WIDTH * hpRatio, HUD_HP_BAR_HEIGHT);
+
+  // 血條上寫數字，例如 HP 70 / 100 (numbers on the bar)
+  ctx.fillStyle = HUD_TEXT_COLOR;
+  setText(ctx, 'bold 11px sans-serif', 'left', 'middle');
+  ctx.fillText(`HP ${Math.ceil(player.hp)} / ${player.maxHp}`, left + 6, y + HUD_HP_BAR_HEIGHT / 2 + 1);
+  y += HUD_HP_BAR_HEIGHT + 4;
+
+  // ----- 護甲條：有護甲才畫 (armor bar, only when armored) -----
+  if (player.armor > 0) {
+    ctx.fillStyle = HUD_SLOT_EMPTY_COLOR;
+    ctx.fillRect(left, y, HUD_HP_BAR_WIDTH, 6);
+    ctx.fillStyle = HUD_ARMOR_COLOR;
+    ctx.fillRect(left, y, HUD_HP_BAR_WIDTH * (player.armor / MAX_ARMOR), 6);
+    y += 10;
+  }
+
+  // ----- 暫時效果 (active buffs) -----
+  setText(ctx, '12px sans-serif', 'left', 'top');
+  for (const buff of buffs) {
+    ctx.fillStyle = buff.color;
+    ctx.fillText(buff.text, left, y + 4);
+    y += 18;
+  }
+}
+
+// ===== 右上：關卡資訊 (top-right: stage info) =====
+
+/**
+ * 右上角的關卡資訊：第幾關、目標、最高紀錄 (stage panel)
+ * @param {CanvasRenderingContext2D} ctx 畫筆
+ * @param {number} stage 第幾關
+ * @param {boolean} isBoss 是否為 BOSS 關
+ * @param {string} objective 目前目標，例如「剩餘敵人 3」
+ * @param {number} bestStage 最高紀錄
+ */
+export function drawStageHud(ctx, stage, isBoss, objective, bestStage) {
+  const right = GAME_WIDTH - HUD_MARGIN;
+  const top = HUD_MARGIN;
+
+  ctx.fillStyle = HUD_BG_COLOR;
+  ctx.fillRect(right - HUD_STAGE_PANEL_WIDTH - 6, top - 6, HUD_STAGE_PANEL_WIDTH + 12, 64);
+
+  // 第 N 關，BOSS 關用紫色並加上標記 (stage number, purple on boss stages)
+  ctx.fillStyle = isBoss ? BOSS_COLOR : HUD_TEXT_COLOR;
+  setText(ctx, 'bold 18px sans-serif', 'right', 'top');
+  ctx.fillText(isBoss ? `BOSS 第 ${stage} 關` : `第 ${stage} 關`, right, top);
+
+  ctx.fillStyle = HUD_TEXT_COLOR;
+  setText(ctx, '13px sans-serif', 'right', 'top');
+  ctx.fillText(objective, right, top + 24);
+
+  ctx.fillStyle = HUD_SUBTEXT_COLOR;
+  setText(ctx, '11px sans-serif', 'right', 'top');
+  ctx.fillText(`最高紀錄：第 ${bestStage} 關`, right, top + 42);
+}
+
+// ===== 畫面中央提示 (center message) =====
+
+/**
+ * 在畫面中央畫提示文字，背後一條半透明黑帶 (draw center message)
+ * @param {CanvasRenderingContext2D} ctx 畫筆
+ * @param {string} text 文字
+ */
+export function drawCenterMessage(ctx, text) {
+  const bandHeight = 60;
+  ctx.fillStyle = MESSAGE_BG_COLOR;
+  ctx.fillRect(0, GAME_HEIGHT / 2 - bandHeight / 2, GAME_WIDTH, bandHeight);
+
+  ctx.fillStyle = MESSAGE_TEXT_COLOR;
+  setText(ctx, 'bold 32px sans-serif', 'center', 'middle');
+  ctx.fillText(text, GAME_WIDTH / 2, GAME_HEIGHT / 2);
+}
+
+// ===== 主選單 (main menu) =====
+
+/**
+ * 主選單：標題、最高紀錄、操作說明、閃爍的開始提示 (main menu screen)
+ * @param {CanvasRenderingContext2D} ctx 畫筆
+ * @param {number} bestStage 最高紀錄
+ * @param {number} time 進入選單後經過的秒數，用來做閃爍 (seconds on the menu, for blinking)
+ */
+export function drawMenu(ctx, bestStage, time) {
+  const cx = GAME_WIDTH / 2;
+
+  ctx.fillStyle = MENU_OVERLAY_COLOR;
+  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+  // 標題 (title)
+  ctx.fillStyle = MENU_TITLE_COLOR;
+  setText(ctx, 'bold 56px sans-serif', 'center', 'middle');
+  ctx.fillText(GAME_TITLE, cx, 150);
+
+  ctx.fillStyle = MENU_SUBTEXT_COLOR;
+  setText(ctx, '16px sans-serif', 'center', 'middle');
+  ctx.fillText(GAME_SUBTITLE, cx, 200);
+
+  // 最高紀錄：0 代表還沒玩過 (best record; 0 = never played)
+  ctx.fillStyle = MENU_TEXT_COLOR;
+  setText(ctx, 'bold 22px sans-serif', 'center', 'middle');
+  ctx.fillText(bestStage > 0 ? `最高紀錄：第 ${bestStage} 關` : '還沒有紀錄', cx, 270);
+
+  // 操作說明 (controls)
+  ctx.fillStyle = MENU_SUBTEXT_COLOR;
+  setText(ctx, '15px sans-serif', 'center', 'middle');
+  ctx.fillText('WASD 移動　　滑鼠瞄準　　按住左鍵射擊', cx, 340);
+  ctx.fillText('R 換彈　　1~8 或滾輪 切換武器', cx, 368);
+  ctx.fillText('打倒所有敵人 → 撿起道具 → 走進出口　每 5 關有 BOSS', cx, 396);
+
+  // 開始提示：前半個週期顯示、後半個週期隱藏，形成閃爍 (blink: visible for half of each period)
+  // % 取餘數：time % 1.0 會在 0 ~ 1 之間不斷循環 (remainder loops from 0 to the period)
+  if (time % MENU_BLINK_PERIOD < MENU_BLINK_PERIOD / 2) {
+    ctx.fillStyle = MENU_TEXT_COLOR;
+    setText(ctx, 'bold 24px sans-serif', 'center', 'middle');
+    ctx.fillText('按 Enter 或點擊畫面開始', cx, 480);
+  }
+}
+
+// ===== 死亡畫面 (game over) =====
+
+/**
+ * 死亡畫面：撐到第幾關、最高紀錄、是否破紀錄、操作提示 (game over screen)
+ * @param {CanvasRenderingContext2D} ctx 畫筆
+ * @param {number} stage 這局撐到第幾關
+ * @param {number} bestStage 最高紀錄
+ * @param {boolean} isNewRecord 這局是否破紀錄
+ * @param {boolean} showHint 是否顯示操作提示（死亡後等一下才顯示）
+ */
+export function drawGameOverScreen(ctx, stage, bestStage, isNewRecord, showHint) {
+  const cx = GAME_WIDTH / 2;
+  const cy = GAME_HEIGHT / 2;
+
+  ctx.fillStyle = GAME_OVER_OVERLAY_COLOR;
+  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+  ctx.fillStyle = GAME_OVER_TEXT_COLOR;
+  setText(ctx, 'bold 48px sans-serif', 'center', 'middle');
+  ctx.fillText('GAME OVER', cx, cy - 80);
+
+  setText(ctx, '24px sans-serif', 'center', 'middle');
+  ctx.fillText(`撐到第 ${stage} 關`, cx, cy - 25);
+
+  if (isNewRecord) {
+    ctx.fillStyle = NEW_RECORD_COLOR;
+    setText(ctx, 'bold 22px sans-serif', 'center', 'middle');
+    ctx.fillText('★ 新紀錄！ ★', cx, cy + 15);
+  } else {
+    ctx.fillStyle = MENU_SUBTEXT_COLOR;
+    setText(ctx, '18px sans-serif', 'center', 'middle');
+    ctx.fillText(`最高紀錄：第 ${bestStage} 關`, cx, cy + 15);
+  }
+
+  if (showHint) {
+    ctx.fillStyle = GAME_OVER_TEXT_COLOR;
+    setText(ctx, '20px sans-serif', 'center', 'middle');
+    ctx.fillText('按 Enter 或點擊畫面重新開始', cx, cy + 70);
+    ctx.fillStyle = MENU_SUBTEXT_COLOR;
+    setText(ctx, '16px sans-serif', 'center', 'middle');
+    ctx.fillText('按 Esc 回主選單', cx, cy + 100);
+  }
+}
+
+// ===== 左下：武器 (bottom-left: weapon) =====
 
 /**
  * 畫一條進度條 (draw a progress bar)

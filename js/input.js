@@ -20,6 +20,7 @@ let confirmQueued = false;
 let reloadQueued = false;         // 按了 R (reload)
 let switchQueued = null;          // 按了數字鍵，存武器位置 0~7；null = 沒按 (number key pressed)
 let wheelQueued = 0;              // 滾輪：+1 下一把，-1 上一把，0 = 沒滾 (mouse wheel)
+let backQueued = false;           // 按了 Esc，回主選單用 (Esc pressed)
 
 // 數字鍵 1~8 對應武器位置 0~7 (number keys → weapon slots)
 const WEAPON_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8'];
@@ -34,6 +35,7 @@ export const input = {
   reload: false,    // 這一幀是否剛按下換彈 (reload pressed this frame)
   switchWeapon: null, // 這一幀要切換到哪個武器位置，null = 不切換 (weapon slot to switch to)
   switchWeaponStep: 0, // 滾輪切換：+1 / -1 / 0 (cycle direction)
+  back: false,      // 這一幀是否剛按下 Esc (back pressed this frame)
 };
 
 /**
@@ -63,6 +65,11 @@ export function initInput(canvas) {
     // Enter = 確認。event.repeat 代表「按住不放自動重複」，不算新的一次 (ignore auto-repeat)
     if (event.code === 'Enter' && !event.repeat) {
       confirmQueued = true;
+    }
+
+    // Esc = 返回 (back)
+    if (event.code === 'Escape' && !event.repeat) {
+      backQueued = true;
     }
 
     // R = 換彈 (reload)
@@ -168,4 +175,7 @@ export function updateInput(player) {
 
   input.switchWeaponStep = wheelQueued;
   wheelQueued = 0;
+
+  input.back = backQueued;
+  backQueued = false;
 }

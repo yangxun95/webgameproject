@@ -1,6 +1,4 @@
 import {
-  GAME_WIDTH,
-  GAME_HEIGHT,
   ENEMY_BASE_COUNT,
   ENEMY_COUNT_MAX,
   ENEMY_COUNT_STAGES_PER_EXTRA,
@@ -8,10 +6,7 @@ import {
   BOSS_MINION_COUNT,
   MESSAGE_TIME,
   GAME_OVER_INPUT_DELAY,
-  MESSAGE_BG_COLOR,
-  MESSAGE_TEXT_COLOR,
-  GAME_OVER_OVERLAY_COLOR,
-  GAME_OVER_TEXT_COLOR,
+  STORAGE_KEY_BEST_STAGE,
   BULLET_STEP_SIZE,
   ENEMY_AMMO_DROP_CHANCE,
   CRATE_AMMO_DROP_CHANCE,
@@ -23,7 +18,44 @@ import { Player } from './player.js';
 import { Enemy, Boss, createEnemyStats, createBossStats } from './enemy.js';
 import { Explosion } from './bullet.js';
 import { createRandomItem, applyItem, AmmoPickup, BossReward } from './items.js';
-import { drawWeaponHud } from './ui.js';
+import {
+  drawWeaponHud,
+  drawStatusHud,
+  drawStageHud,
+  drawCenterMessage,
+  drawMenu,
+  drawGameOverScreen,
+} from './ui.js';
+
+// ===== 最高紀錄存檔：localStorage (best record in localStorage) =====
+// localStorage 是瀏覽器提供的小型儲存空間，關掉網頁再打開資料還在，但只能存字串。
+// 無痕模式或瀏覽器封鎖儲存時可能會出錯，所以用 try / catch 包起來，失敗就當作沒有紀錄。
+
+/**
+ * 讀取最高紀錄 (load best stage)
+ * @returns {number} 最高關卡，沒有紀錄回傳 0
+ */
+function loadBestStage() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_BEST_STAGE); // 沒存過會得到 null (null if never saved)
+    const value = Number(saved);                                // 字串轉數字，null 會變 0 (string → number)
+    return Number.isFinite(value) ? value : 0;                  // 不是正常數字就當 0 (guard against junk)
+  } catch (error) {
+    return 0;
+  }
+}
+
+/**
+ * 儲存最高紀錄 (save best stage)
+ * @param {number} stage 關卡數
+ */
+function saveBestStage(stage) {
+  try {
+    localStorage.setItem(STORAGE_KEY_BEST_STAGE, String(stage)); // 只能存字串 (strings only)
+  } catch (error) {
+    // 存不了就算了，遊戲照樣能玩 (ignore: the game still works without saving)
+  }
+}
 
 /**
  * 兩個圓有沒有重疊：圓心距離 < 兩個半徑相加 (circle-circle collision)
@@ -37,26 +69,71 @@ function circlesOverlap(a, b) {
 
 // 遊戲本體：管理目前狀態、第幾關，以及地圖、玩家、敵人、子彈 (game state & stage flow)
 //
-// 遊戲狀態 state 只有兩種：
+// 遊戲狀態 state 有三種：
+//   'menu'   ：主選單（背景是一張還沒開始的地圖）
 //   'playing'：遊戲中
-//   'dead'   ：玩家死亡，等待重新開始
-// 第 9 步做主選單時會再加一個 'menu'。
+//   'dead'   ：玩家死亡，等待重新開始或回主選單
+//
+//   menu ──Enter──→ playing ──死亡──→ dead ──Enter──→ playing
+//     ↑                                 │
+//     └──────────────Esc────────────────┘
 export class Game {
   constructor() {
-    this.startNewRun();
+    this.bestStage = loadBestStage();
+    this.goToMenu();
   }
 
   // ===== 流程控制 (flow control) =====
 
   /**
-   * 開始新的一局：從第 1 關開始，玩家重新建立（血量、之後的武器道具全部重置）(start a new run)
+   * 回到主選單：先準備好一局當作背景，但不開始更新 (go to the main menu)
+   */
+  goToMenu() {
+    this.state = 'menu';
+    this.prepareRun();
+    this.menuTimer = 0;      // 在選單停留幾秒，閃爍提示用 (seconds on the menu)
+    this.messageTimer = 0;   // 選單上不顯示「第 1 關」(no stage banner on the menu)
+  }
+
+  /**
+   * 開始新的一局並進入遊戲 (start a new run and play)
    */
   startNewRun() {
     this.state = 'playing';
+    this.prepareRun();
+  }
+
+  /**
+   * 準備一局：從第 1 關開始，玩家重新建立（血量、武器、道具全部重置）(prepare a fresh run)
+   * 主選單和開新局都會用到，差別只在 state。
+   */
+  prepareRun() {
     this.stage = 1;
     this.player = null;     // 設成 null，loadStage 才會建立新玩家 (force a fresh player)
     this.deadTimer = 0;     // 死亡後經過幾秒 (seconds since death)
+    // 記下開局時的紀錄，死亡時比較，才知道這局有沒有破紀錄 (record before this run)
+    this.recordAtRunStart = this.bestStage;
     this.loadStage();
+  }
+
+  /**
+   * 目前關卡超過最高紀錄就更新並存檔 (update and save the best record)
+   * 每進一關就檢查，所以就算玩到一半直接關掉網頁，紀錄也不會不見。
+   */
+  updateBestStage() {
+    if (this.state !== 'playing') return; // 主選單的背景地圖不算 (menu background doesn't count)
+    if (this.stage > this.bestStage) {
+      this.bestStage = this.stage;
+      saveBestStage(this.bestStage);
+    }
+  }
+
+  /**
+   * 這局是否破了紀錄 (did this run beat the old record)
+   * @returns {boolean}
+   */
+  isNewRecord() {
+    return this.stage > this.recordAtRunStart;
   }
 
   /**
@@ -91,6 +168,8 @@ export class Game {
     this.lastEnemyDeathY = 0;
     // BOSS 掉落的獎勵：null 代表沒有 (boss reward on the ground, null = none)
     this.bossReward = null;
+
+    this.updateBestStage();
 
     if (this.isBossStage()) {
       this.showMessage(`第 ${this.stage} 關 - BOSS 戰！`);
@@ -172,10 +251,23 @@ export class Game {
     updateInput(this.player);
     this.messageTimer = Math.max(0, this.messageTimer - dt);
 
-    if (this.state === 'playing') {
+    if (this.state === 'menu') {
+      this.updateMenu(dt);
+    } else if (this.state === 'playing') {
       this.updatePlaying(dt);
     } else if (this.state === 'dead') {
       this.updateDead(dt);
+    }
+  }
+
+  /**
+   * 主選單的更新：按 Enter 或點擊就開始新的一局 (update on the menu)
+   * @param {number} dt 經過秒數
+   */
+  updateMenu(dt) {
+    this.menuTimer += dt;
+    if (input.confirm) {
+      this.startNewRun();
     }
   }
 
@@ -277,9 +369,27 @@ export class Game {
    */
   updateDead(dt) {
     this.deadTimer += dt;
-    if (this.deadTimer >= GAME_OVER_INPUT_DELAY && input.confirm) {
+    if (this.deadTimer < GAME_OVER_INPUT_DELAY) return; // 還在等待時間內 (still in the delay)
+
+    if (input.confirm) {
       this.startNewRun();
+    } else if (input.back) {
+      this.goToMenu();
     }
+  }
+
+  /**
+   * 右上角要顯示的目前目標 (current objective text)
+   * @returns {string}
+   */
+  getObjectiveText() {
+    if (this.enemies.length > 0) {
+      return `剩餘敵人：${this.enemies.length}`;
+    }
+    if (!this.map.exitOpen) {
+      return this.bossReward !== null ? '撿起道具和 BOSS 獎勵' : '撿起道具';
+    }
+    return '前往出口！';
   }
 
   // ===== 子彈、爆炸、彈藥 (bullets, explosions, ammo) =====
@@ -410,52 +520,27 @@ export class Game {
       explosion.draw(ctx);
     }
 
+    // ----- 依狀態畫最上層的介面 (UI layer by state) -----
+    if (this.state === 'menu') {
+      drawMenu(ctx, this.bestStage, this.menuTimer);
+      return; // 選單不畫 HUD (no HUD on the menu)
+    }
+
+    drawStatusHud(ctx, this.player);
+    drawStageHud(ctx, this.stage, this.isBossStage(), this.getObjectiveText(), this.bestStage);
     drawWeaponHud(ctx, this.player);
 
     if (this.messageTimer > 0) {
-      this.drawMessage(ctx);
+      drawCenterMessage(ctx, this.messageText);
     }
     if (this.state === 'dead') {
-      this.drawGameOver(ctx);
-    }
-  }
-
-  /**
-   * 在畫面中央畫提示文字，背後一條半透明黑帶 (draw center message)
-   * @param {CanvasRenderingContext2D} ctx 畫筆
-   */
-  drawMessage(ctx) {
-    const bandHeight = 60;
-    ctx.fillStyle = MESSAGE_BG_COLOR;
-    ctx.fillRect(0, GAME_HEIGHT / 2 - bandHeight / 2, GAME_WIDTH, bandHeight);
-
-    ctx.fillStyle = MESSAGE_TEXT_COLOR;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = 'bold 32px sans-serif';
-    ctx.fillText(this.messageText, GAME_WIDTH / 2, GAME_HEIGHT / 2);
-  }
-
-  /**
-   * 玩家死亡時，蓋一層半透明黑色並顯示文字 (game over overlay)
-   * @param {CanvasRenderingContext2D} ctx 畫筆
-   */
-  drawGameOver(ctx) {
-    ctx.fillStyle = GAME_OVER_OVERLAY_COLOR;
-    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-    ctx.fillStyle = GAME_OVER_TEXT_COLOR;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = 'bold 48px sans-serif';
-    ctx.fillText('GAME OVER', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40);
-    ctx.font = '24px sans-serif';
-    ctx.fillText(`撐到第 ${this.stage} 關`, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10);
-
-    // 等待時間過了才顯示操作提示 (show hint after the delay)
-    if (this.deadTimer >= GAME_OVER_INPUT_DELAY) {
-      ctx.font = '20px sans-serif';
-      ctx.fillText('按 Enter 或點擊畫面重新開始', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50);
+      drawGameOverScreen(
+        ctx,
+        this.stage,
+        this.bestStage,
+        this.isNewRecord(),
+        this.deadTimer >= GAME_OVER_INPUT_DELAY
+      );
     }
   }
 }

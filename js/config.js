@@ -1,5 +1,11 @@
 // 遊戲所有數值都集中在這裡，方便調整 (all game settings in one place)
 
+// ===== 遊戲資訊與存檔 (game info & save data) =====
+export const GAME_TITLE = 'ROGUE SHOOTER';          // 主選單標題，可以改成你們取的遊戲名稱 (menu title)
+export const GAME_SUBTITLE = '資管三 C 網路程式設計期末專題'; // 主選單副標題 (menu subtitle)
+// localStorage 的 key：同一個網域下的網站共用 localStorage，加上專案名稱避免撞名 (storage key, prefixed)
+export const STORAGE_KEY_BEST_STAGE = 'webgameproject.bestStage';
+
 // ===== 畫面與地圖尺寸 (screen & map size) =====
 export const TILE_SIZE = 32;                        // 每一格的邊長，單位 px (tile size)
 export const MAP_COLS = 25;                         // 地圖有幾欄 (columns)
@@ -97,6 +103,26 @@ export const HUD_SLOT_EMPTY_COLOR = '#263238';      // 未取得的武器格 (lo
 export const HUD_SLOT_SELECTED_COLOR = '#ffeb3b';   // 目前武器的外框 (selected slot border)
 export const HUD_RELOAD_COLOR = '#90caf9';
 export const HUD_SPIN_COLOR = '#ffab40';
+
+// ===== 狀態 HUD（左上角血量、右上角關卡）(status HUD) =====
+export const HUD_HP_BAR_WIDTH = 180;
+export const HUD_HP_BAR_HEIGHT = 14;
+export const HUD_HP_COLOR = '#66bb6a';
+export const HUD_HP_LOW_COLOR = '#ef5350';          // 血量低時變紅 (low HP color)
+export const HUD_HP_LOW_RATIO = 0.3;                // 血量低於 30% 算「低」(low HP threshold)
+export const HUD_ARMOR_COLOR = '#90caf9';
+export const HUD_ADRENALINE_COLOR = '#80deea';
+export const HUD_POWER_AMMO_COLOR = '#ffcc80';
+export const HUD_STAGE_PANEL_WIDTH = 150;
+
+// ===== 主選單與死亡畫面 (menu & game over) =====
+export const MENU_OVERLAY_COLOR = 'rgba(0, 0, 0, 0.7)';
+export const MENU_TITLE_COLOR = '#ffeb3b';
+export const MENU_TEXT_COLOR = '#ffffff';
+export const MENU_SUBTEXT_COLOR = '#b0bec5';
+export const NEW_RECORD_COLOR = '#ffd54f';
+// 開始提示的閃爍週期，單位秒 (blink period of the "press to start" hint)
+export const MENU_BLINK_PERIOD = 1.0;
 
 // ===== 受傷效果與血條 (hit effect & HP bar) =====
 export const HIT_FLASH_TIME = 0.1;        // 受傷閃白幾秒 (flash duration)
