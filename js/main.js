@@ -40,6 +40,10 @@ window.addEventListener('resize', resizeCanvas);
 
 const game = new Game();
 
+// 手機直向時暫停遊戲；條件和 style.css 的直向提示一樣 (pause in portrait, same rule as the CSS hint)
+// matchMedia 讓 JS 也能用 CSS media query 判斷 (use a CSS media query from JS)
+const portraitQuery = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
+
 /**
  * 畫格線，方便看出 tile 的大小 (draw tile grid)
  */
@@ -85,7 +89,10 @@ function gameLoop(currentTime) {
   // 避免 dt 太大（例如切換分頁後回來）(cap delta time)
   dt = Math.min(dt, MAX_DELTA_TIME);
 
-  game.update(dt);
+  // 直向時畫面被提示蓋住，不更新遊戲，免得玩家看不到的時候被打死 (don't update while the rotate hint is shown)
+  if (!portraitQuery.matches) {
+    game.update(dt);
+  }
   draw();
 
   // 預約下一幀 (schedule next frame)

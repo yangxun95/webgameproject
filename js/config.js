@@ -115,6 +115,26 @@ export const HUD_ADRENALINE_COLOR = '#80deea';
 export const HUD_POWER_AMMO_COLOR = '#ffcc80';
 export const HUD_STAGE_PANEL_WIDTH = 150;
 
+// ===== 手機觸控操作 (touch controls) =====
+export const TOUCH_STICK_RADIUS = 60;        // 搖桿最多能推多遠，單位 px (max knob distance)
+export const TOUCH_KNOB_RADIUS = 24;         // 搖桿頭大小 (knob size)
+export const TOUCH_DEADZONE = 0.2;           // 推不到 20% 當作沒推，避免手指輕微晃動 (dead zone ratio)
+export const TOUCH_SLOT_PADDING = 8;         // 武器欄的觸控範圍往外多 8px，比較好點 (extra hit area)
+// 沒在推的時候，畫一個淡淡的搖桿提示在這裡 (hint position when the stick is idle)
+export const TOUCH_LEFT_HINT_X = 160;
+export const TOUCH_LEFT_HINT_Y = 420;
+export const TOUCH_RIGHT_HINT_X = GAME_WIDTH - 220;
+export const TOUCH_RIGHT_HINT_Y = 420;
+// 右下角的按鈕：換彈、換槍 (buttons at the bottom-right)
+export const RELOAD_BUTTON = { x: GAME_WIDTH - 60, y: GAME_HEIGHT - 60, radius: 36, label: '換彈' };
+export const SWITCH_BUTTON = { x: GAME_WIDTH - 60, y: GAME_HEIGHT - 150, radius: 30, label: '換槍' };
+export const TOUCH_BASE_COLOR = 'rgba(255, 255, 255, 0.15)';
+export const TOUCH_BASE_BORDER_COLOR = 'rgba(255, 255, 255, 0.35)';
+export const TOUCH_KNOB_COLOR = 'rgba(255, 255, 255, 0.45)';
+export const TOUCH_HINT_COLOR = 'rgba(255, 255, 255, 0.08)';
+export const TOUCH_BUTTON_COLOR = 'rgba(0, 0, 0, 0.45)';
+export const TOUCH_BUTTON_TEXT_COLOR = 'rgba(255, 255, 255, 0.85)';
+
 // ===== 主選單與死亡畫面 (menu & game over) =====
 export const MENU_OVERLAY_COLOR = 'rgba(0, 0, 0, 0.7)';
 export const MENU_TITLE_COLOR = '#ffeb3b';

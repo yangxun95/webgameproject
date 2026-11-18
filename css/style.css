@@ -5,6 +5,13 @@ body {
   height: 100%;
   background: #000;
   overflow: hidden;
+  /* 手機上：不要往下拉重新整理、不要長按跳出選單、不要選取文字 (mobile: no pull-to-refresh, no callout, no selection) */
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* 點擊時不要出現藍色閃光 (no tap highlight) */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* 用 flex 讓 canvas 永遠置中 (center the canvas) */
@@ -15,8 +22,38 @@ body {
 }
 
 /* display: block 可以去掉 canvas 下方多出來的空白 (remove inline gap) */
-/* 游標改成十字準心，方便瞄準 (crosshair cursor for aiming) */
+/* touch-action: none：手指在 canvas 上滑動時，瀏覽器不要捲動或縮放，全部交給遊戲處理 (game handles all touch) */
 canvas {
   display: block;
   cursor: crosshair;
+  touch-action: none;
+}
+
+/* ===== 直向提示 (rotate hint) ===== */
+/* 預設隱藏 (hidden by default) */
+#rotate-hint {
+  display: none;
+}
+
+/* 只有「直向」而且是「觸控螢幕」的裝置才顯示，電腦視窗拉成直的不會跳出來 */
+/* (show only on touch devices held in portrait) */
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate-hint {
+    position: fixed;
+    inset: 0;                     /* 上下左右都貼齊，蓋滿整個畫面 (cover the whole screen) */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    background: #111;
+    color: #fff;
+    font-family: sans-serif;
+    font-size: 22px;
+    z-index: 10;                  /* 疊在 canvas 上面 (above the canvas) */
+  }
+
+  .rotate-icon {
+    font-size: 64px;
+  }
 }

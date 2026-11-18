@@ -2,14 +2,20 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <!-- 讓手機用裝置實際寬度顯示，不要自動縮小 (mobile viewport) -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>2D RPG Shooter</title>
+  <!-- 讓手機用裝置實際寬度顯示；禁止雙指縮放，避免玩到一半畫面被放大 (mobile viewport, no pinch zoom) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ROGUE SHOOTER</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <!-- 遊戲畫布，所有畫面都畫在這裡 (game canvas) -->
   <canvas id="game"></canvas>
+
+  <!-- 手機直向時蓋在畫面上的提示，由 CSS 決定何時顯示 (rotate hint, shown by CSS) -->
+  <div id="rotate-hint">
+    <div class="rotate-icon">⟳</div>
+    <div>請將手機轉為橫向</div>
+  </div>
 
   <!-- type="module" 才能在 JS 裡使用 import / export (ES Modules) -->
   <script type="module" src="js/main.js"></script>

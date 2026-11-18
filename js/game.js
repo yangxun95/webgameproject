@@ -12,7 +12,7 @@ import {
   CRATE_AMMO_DROP_CHANCE,
   AMMO_PICKUP_RATIO,
 } from './config.js';
-import { input, updateInput } from './input.js';
+import { input, updateInput, isTouchMode, getTouchControls } from './input.js';
 import { GameMap } from './map.js';
 import { Player } from './player.js';
 import { Enemy, Boss, createEnemyStats, createBossStats } from './enemy.js';
@@ -25,6 +25,7 @@ import {
   drawCenterMessage,
   drawMenu,
   drawGameOverScreen,
+  drawTouchControls,
 } from './ui.js';
 
 // ===== 最高紀錄存檔：localStorage (best record in localStorage) =====
@@ -522,13 +523,18 @@ export class Game {
 
     // ----- 依狀態畫最上層的介面 (UI layer by state) -----
     if (this.state === 'menu') {
-      drawMenu(ctx, this.bestStage, this.menuTimer);
+      drawMenu(ctx, this.bestStage, this.menuTimer, isTouchMode());
       return; // 選單不畫 HUD (no HUD on the menu)
     }
 
     drawStatusHud(ctx, this.player);
     drawStageHud(ctx, this.stage, this.isBossStage(), this.getObjectiveText(), this.bestStage);
     drawWeaponHud(ctx, this.player);
+
+    // 觸控模式而且在遊戲中，才畫虛擬搖桿和按鈕 (touch controls only while playing on touch)
+    if (isTouchMode() && this.state === 'playing') {
+      drawTouchControls(ctx, getTouchControls());
+    }
 
     if (this.messageTimer > 0) {
       drawCenterMessage(ctx, this.messageText);
@@ -539,7 +545,8 @@ export class Game {
         this.stage,
         this.bestStage,
         this.isNewRecord(),
-        this.deadTimer >= GAME_OVER_INPUT_DELAY
+        this.deadTimer >= GAME_OVER_INPUT_DELAY,
+        isTouchMode()
       );
     }
   }

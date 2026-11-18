@@ -38,6 +38,20 @@ import {
   HUD_RELOAD_COLOR,
   HUD_SPIN_COLOR,
   MAX_ARMOR,
+  TOUCH_STICK_RADIUS,
+  TOUCH_KNOB_RADIUS,
+  TOUCH_LEFT_HINT_X,
+  TOUCH_LEFT_HINT_Y,
+  TOUCH_RIGHT_HINT_X,
+  TOUCH_RIGHT_HINT_Y,
+  RELOAD_BUTTON,
+  SWITCH_BUTTON,
+  TOUCH_BASE_COLOR,
+  TOUCH_BASE_BORDER_COLOR,
+  TOUCH_KNOB_COLOR,
+  TOUCH_HINT_COLOR,
+  TOUCH_BUTTON_COLOR,
+  TOUCH_BUTTON_TEXT_COLOR,
 } from './config.js';
 
 // HUD（抬頭顯示）與選單畫面：畫在遊戲畫面最上層的資訊 (heads-up display & screens)
@@ -167,8 +181,9 @@ export function drawCenterMessage(ctx, text) {
  * @param {CanvasRenderingContext2D} ctx 畫筆
  * @param {number} bestStage 最高紀錄
  * @param {number} time 進入選單後經過的秒數，用來做閃爍 (seconds on the menu, for blinking)
+ * @param {boolean} touchMode 是否為觸控模式，決定顯示哪一種操作說明 (show touch or keyboard help)
  */
-export function drawMenu(ctx, bestStage, time) {
+export function drawMenu(ctx, bestStage, time, touchMode) {
   const cx = GAME_WIDTH / 2;
 
   ctx.fillStyle = MENU_OVERLAY_COLOR;
@@ -191,8 +206,13 @@ export function drawMenu(ctx, bestStage, time) {
   // 操作說明 (controls)
   ctx.fillStyle = MENU_SUBTEXT_COLOR;
   setText(ctx, '15px sans-serif', 'center', 'middle');
-  ctx.fillText('WASD 移動　　滑鼠瞄準　　按住左鍵射擊', cx, 340);
-  ctx.fillText('R 換彈　　1~8 或滾輪 切換武器', cx, 368);
+  if (touchMode) {
+    ctx.fillText('左半邊：搖桿移動　　右半邊：搖桿瞄準並自動射擊', cx, 340);
+    ctx.fillText('右下按鈕：換彈、換槍　　也可以點左下角的武器欄', cx, 368);
+  } else {
+    ctx.fillText('WASD 移動　　滑鼠瞄準　　按住左鍵射擊', cx, 340);
+    ctx.fillText('R 換彈　　1~8 或滾輪 切換武器', cx, 368);
+  }
   ctx.fillText('打倒所有敵人 → 撿起道具 → 走進出口　每 5 關有 BOSS', cx, 396);
 
   // 開始提示：前半個週期顯示、後半個週期隱藏，形成閃爍 (blink: visible for half of each period)
@@ -200,7 +220,7 @@ export function drawMenu(ctx, bestStage, time) {
   if (time % MENU_BLINK_PERIOD < MENU_BLINK_PERIOD / 2) {
     ctx.fillStyle = MENU_TEXT_COLOR;
     setText(ctx, 'bold 24px sans-serif', 'center', 'middle');
-    ctx.fillText('按 Enter 或點擊畫面開始', cx, 480);
+    ctx.fillText(touchMode ? '點擊畫面開始' : '按 Enter 或點擊畫面開始', cx, 480);
   }
 }
 
@@ -213,8 +233,9 @@ export function drawMenu(ctx, bestStage, time) {
  * @param {number} bestStage 最高紀錄
  * @param {boolean} isNewRecord 這局是否破紀錄
  * @param {boolean} showHint 是否顯示操作提示（死亡後等一下才顯示）
+ * @param {boolean} touchMode 是否為觸控模式 (touch mode)
  */
-export function drawGameOverScreen(ctx, stage, bestStage, isNewRecord, showHint) {
+export function drawGameOverScreen(ctx, stage, bestStage, isNewRecord, showHint, touchMode) {
   const cx = GAME_WIDTH / 2;
   const cy = GAME_HEIGHT / 2;
 
@@ -241,10 +262,15 @@ export function drawGameOverScreen(ctx, stage, bestStage, isNewRecord, showHint)
   if (showHint) {
     ctx.fillStyle = GAME_OVER_TEXT_COLOR;
     setText(ctx, '20px sans-serif', 'center', 'middle');
-    ctx.fillText('按 Enter 或點擊畫面重新開始', cx, cy + 70);
-    ctx.fillStyle = MENU_SUBTEXT_COLOR;
-    setText(ctx, '16px sans-serif', 'center', 'middle');
-    ctx.fillText('按 Esc 回主選單', cx, cy + 100);
+    // 手機沒有 Enter 和 Esc，只提示點擊 (no keyboard on phones)
+    if (touchMode) {
+      ctx.fillText('點擊畫面重新開始', cx, cy + 70);
+    } else {
+      ctx.fillText('按 Enter 或點擊畫面重新開始', cx, cy + 70);
+      ctx.fillStyle = MENU_SUBTEXT_COLOR;
+      setText(ctx, '16px sans-serif', 'center', 'middle');
+      ctx.fillText('按 Esc 回主選單', cx, cy + 100);
+    }
   }
 }
 
@@ -275,7 +301,6 @@ export function drawWeaponHud(ctx, player) {
   const def = weapon.def;
 
   const left = HUD_MARGIN;
-  const slotsTop = GAME_HEIGHT - HUD_MARGIN - HUD_SLOT_SIZE;   // 武器欄的上緣 (slot row top)
   const panelWidth = WEAPONS.length * (HUD_SLOT_SIZE + HUD_SLOT_GAP) - HUD_SLOT_GAP;
   const panelHeight = 74;
   const panelTop = GAME_HEIGHT - HUD_MARGIN - panelHeight;
@@ -321,26 +346,100 @@ export function drawWeaponHud(ctx, player) {
 
   // ----- 8 格武器欄 (8 weapon slots) -----
   for (let i = 0; i < WEAPONS.length; i++) {
-    const x = left + i * (HUD_SLOT_SIZE + HUD_SLOT_GAP);
+    const slot = getWeaponSlotRect(i);
     const owned = player.weapons[i] !== null;
 
     ctx.fillStyle = owned ? HUD_SLOT_OWNED_COLOR : HUD_SLOT_EMPTY_COLOR;
-    ctx.fillRect(x, slotsTop, HUD_SLOT_SIZE, HUD_SLOT_SIZE);
+    ctx.fillRect(slot.x, slot.y, slot.size, slot.size);
 
     // 目前的武器加上黃色外框 (highlight current weapon)
     if (i === player.currentIndex) {
       ctx.strokeStyle = HUD_SLOT_SELECTED_COLOR;
       ctx.lineWidth = 2;
-      ctx.strokeRect(x, slotsTop, HUD_SLOT_SIZE, HUD_SLOT_SIZE);
+      ctx.strokeRect(slot.x, slot.y, slot.size, slot.size);
     }
 
     // 格子裡寫數字鍵 1~8 (number key label)
     ctx.fillStyle = owned ? HUD_TEXT_COLOR : HUD_SUBTEXT_COLOR;
-    ctx.font = 'bold 12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${i + 1}`, x + HUD_SLOT_SIZE / 2, slotsTop + HUD_SLOT_SIZE / 2 + 1);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
+    setText(ctx, 'bold 12px sans-serif', 'center', 'middle');
+    ctx.fillText(`${i + 1}`, slot.x + slot.size / 2, slot.y + slot.size / 2 + 1);
   }
+}
+
+/**
+ * 第 i 格武器欄的位置和大小；畫圖和觸控判斷共用，才不會「畫的位置」和「點的位置」對不上 (slot rectangle)
+ * @param {number} i 第幾格，0 ~ 7
+ * @returns {{x: number, y: number, size: number}} 左上角座標與邊長
+ */
+export function getWeaponSlotRect(i) {
+  return {
+    x: HUD_MARGIN + i * (HUD_SLOT_SIZE + HUD_SLOT_GAP),
+    y: GAME_HEIGHT - HUD_MARGIN - HUD_SLOT_SIZE,
+    size: HUD_SLOT_SIZE,
+  };
+}
+
+// ===== 手機觸控操作 (touch controls) =====
+
+/**
+ * 畫一個圓形按鈕，例如「換彈」(draw a round button)
+ * @param {CanvasRenderingContext2D} ctx 畫筆
+ * @param {{x: number, y: number, radius: number, label: string}} button 按鈕設定
+ */
+function drawTouchButton(ctx, button) {
+  ctx.fillStyle = TOUCH_BUTTON_COLOR;
+  ctx.beginPath();
+  ctx.arc(button.x, button.y, button.radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = TOUCH_BASE_BORDER_COLOR;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = TOUCH_BUTTON_TEXT_COLOR;
+  setText(ctx, 'bold 14px sans-serif', 'center', 'middle');
+  ctx.fillText(button.label, button.x, button.y + 1);
+}
+
+/**
+ * 畫一個搖桿：推動中畫底座 + 搖桿頭；沒推的時候在預設位置畫淡淡的提示圈 (draw one joystick)
+ * @param {CanvasRenderingContext2D} ctx 畫筆
+ * @param {object} stick 搖桿狀態，來自 input.js
+ * @param {number} hintX 提示圈 x
+ * @param {number} hintY 提示圈 y
+ */
+function drawStick(ctx, stick, hintX, hintY) {
+  if (stick.pointerId === null) {
+    ctx.fillStyle = TOUCH_HINT_COLOR;
+    ctx.beginPath();
+    ctx.arc(hintX, hintY, TOUCH_STICK_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  // 底座：手指一開始按下的位置 (base: where the finger first touched)
+  ctx.fillStyle = TOUCH_BASE_COLOR;
+  ctx.beginPath();
+  ctx.arc(stick.baseX, stick.baseY, TOUCH_STICK_RADIUS, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = TOUCH_BASE_BORDER_COLOR;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 搖桿頭：跟著手指，但不超出底座 (knob: follows the finger, stays inside the base)
+  ctx.fillStyle = TOUCH_KNOB_COLOR;
+  ctx.beginPath();
+  ctx.arc(stick.knobX, stick.knobY, TOUCH_KNOB_RADIUS, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/**
+ * 畫出所有觸控操作：兩個搖桿、換彈按鈕、換槍按鈕 (draw all touch controls)
+ * @param {CanvasRenderingContext2D} ctx 畫筆
+ * @param {{leftStick: object, rightStick: object}} controls 搖桿狀態
+ */
+export function drawTouchControls(ctx, controls) {
+  drawStick(ctx, controls.leftStick, TOUCH_LEFT_HINT_X, TOUCH_LEFT_HINT_Y);
+  drawStick(ctx, controls.rightStick, TOUCH_RIGHT_HINT_X, TOUCH_RIGHT_HINT_Y);
+  drawTouchButton(ctx, RELOAD_BUTTON);
+  drawTouchButton(ctx, SWITCH_BUTTON);
 }
