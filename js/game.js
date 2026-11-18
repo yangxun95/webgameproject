@@ -13,6 +13,7 @@ import { input, updateInput } from './input.js';
 import { GameMap } from './map.js';
 import { Player } from './player.js';
 import { Enemy } from './enemy.js';
+import { createRandomItem, applyItem } from './items.js';
 
 /**
  * 兩個圓有沒有重疊：圓心距離 < 兩個半徑相加 (circle-circle collision)
@@ -71,6 +72,15 @@ export class Game {
     }
 
     this.bullets = [];
+
+    // 這一關的道具：null 代表地上沒有道具 (item on the ground, null = none)
+    this.item = null;
+    // 敵人是否已經全滅過（道具只掉一次）(has the stage been cleared)
+    this.stageCleared = false;
+    // 最後一個倒下的敵人位置，道具會掉在這裡 (where the last enemy died)
+    this.lastEnemyDeathX = 0;
+    this.lastEnemyDeathY = 0;
+
     this.showMessage(`第 ${this.stage} 關`);
   }
 
@@ -117,6 +127,14 @@ export class Game {
 
     this.checkBulletHits();
 
+    // 移除前先記下死掉敵人的位置，道具要掉在這裡 (remember where enemies died)
+    for (const enemy of this.enemies) {
+      if (enemy.isDead()) {
+        this.lastEnemyDeathX = enemy.x;
+        this.lastEnemyDeathY = enemy.y;
+      }
+    }
+
     // 清除死掉的子彈和敵人 (remove dead bullets and enemies)
     this.bullets = this.bullets.filter((bullet) => bullet.alive);
     this.enemies = this.enemies.filter((enemy) => !enemy.isDead());
@@ -129,11 +147,19 @@ export class Game {
       return;
     }
 
-    // ----- 清關：敵人全滅就開啟出口 (stage clear: open the exit) -----
-    // 第 6 步會改成：敵人全滅 → 掉落道具 → 撿起道具才開啟出口
-    if (this.enemies.length === 0 && !this.map.exitOpen) {
+    // ----- 清關：敵人全滅 → 在最後一個敵人倒下的位置掉落道具 (stage clear: drop an item) -----
+    if (this.enemies.length === 0 && !this.stageCleared) {
+      this.stageCleared = true;
+      this.item = createRandomItem(this.lastEnemyDeathX, this.lastEnemyDeathY);
+      this.showMessage('敵人全滅！撿起道具');
+    }
+
+    // ----- 撿起道具 → 套用效果，開啟出口 (pick up item: apply it and open the exit) -----
+    if (this.item !== null && circlesOverlap(this.player, this.item)) {
+      applyItem(this.item.type, this.player);
+      this.showMessage(this.item.getPickupText());
+      this.item = null;
       this.map.openExit();
-      this.showMessage('出口已開啟！');
     }
 
     // ----- 走進開啟的出口：進入下一關 (enter the open exit: next stage) -----
@@ -185,6 +211,10 @@ export class Game {
    */
   draw(ctx) {
     this.map.draw(ctx);
+
+    if (this.item !== null) {
+      this.item.draw(ctx);
+    }
 
     for (const bullet of this.bullets) {
       bullet.draw(ctx);

@@ -13,6 +13,7 @@ import {
   HP_BAR_OFFSET,
   HP_BAR_BG_COLOR,
   HP_BAR_COLOR,
+  ARMOR_BAR_COLOR,
 } from './config.js';
 import { Bullet } from './bullet.js';
 
@@ -35,6 +36,7 @@ export class Character {
     this.speed = speed;
     this.maxHp = maxHp;
     this.hp = maxHp;
+    this.armor = 0;           // 護甲：受傷時先扣護甲 (armor absorbs damage first)
     this.color = color;
 
     this.aimAngle = 0;        // 瞄準角度 (aim angle)
@@ -46,11 +48,15 @@ export class Character {
   // ===== 血量 (health) =====
 
   /**
-   * 受到傷害 (take damage)
+   * 受到傷害：先扣護甲，護甲不夠的部分才扣血 (take damage, armor first)
    * @param {number} amount 傷害量
    */
   takeDamage(amount) {
-    this.hp = Math.max(0, this.hp - amount);
+    // 護甲能擋多少：最多擋掉全部傷害，但不能超過現有護甲 (how much armor absorbs)
+    const absorbed = Math.min(this.armor, amount);
+    this.armor -= absorbed;
+
+    this.hp = Math.max(0, this.hp - (amount - absorbed));
     this.hitFlashTimer = HIT_FLASH_TIME;
   }
 
@@ -102,8 +108,17 @@ export class Character {
    * @param {GameMap} map 地圖
    */
   move(dirX, dirY, dt, map) {
-    this.moveX(dirX * this.speed * dt, map);
-    this.moveY(dirY * this.speed * dt, map);
+    const speed = this.getSpeed();
+    this.moveX(dirX * speed * dt, map);
+    this.moveY(dirY * speed * dt, map);
+  }
+
+  /**
+   * 目前的移動速度；子類別可以覆寫，例如玩家吃了腎上腺素會變快 (current speed, can be overridden)
+   * @returns {number}
+   */
+  getSpeed() {
+    return this.speed;
   }
 
   /**
@@ -204,5 +219,12 @@ export class Character {
     // 剩餘血量：寬度 = 總寬 × 血量比例 (remaining HP)
     ctx.fillStyle = HP_BAR_COLOR;
     ctx.fillRect(left, top, HP_BAR_WIDTH * (this.hp / this.maxHp), HP_BAR_HEIGHT);
+
+    // 有護甲時，在血條上方再畫一條護甲條，長度以「最大血量」為基準 (armor bar above HP bar)
+    if (this.armor > 0) {
+      const armorRatio = Math.min(1, this.armor / this.maxHp);
+      ctx.fillStyle = ARMOR_BAR_COLOR;
+      ctx.fillRect(left, top - HP_BAR_HEIGHT - 1, HP_BAR_WIDTH * armorRatio, HP_BAR_HEIGHT);
+    }
   }
 }

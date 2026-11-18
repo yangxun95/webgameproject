@@ -53,6 +53,17 @@ export const TRAP_SPIKE_COLOR = '#e57373';
 export const HIT_FLASH_COLOR = '#ffffff';                 // 受傷閃白 (hit flash)
 export const HP_BAR_BG_COLOR = 'rgba(0, 0, 0, 0.6)';
 export const HP_BAR_COLOR = '#66bb6a';
+export const ARMOR_BAR_COLOR = '#90caf9';                  // 護甲條 (armor bar)
+export const ITEM_BORDER_COLOR = '#ffffff';
+export const ITEM_TEXT_COLOR = '#1b1b1b';
+export const MEDKIT_COLOR = '#ef9a9a';
+export const ARMOR_COLOR = '#90caf9';
+export const ADRENALINE_COLOR = '#80deea';
+export const POWER_AMMO_COLOR = '#ffcc80';
+export const LIFE_ESSENCE_COLOR = '#f48fb1';
+export const QUICK_GLOVES_COLOR = '#c5e1a5';
+export const SPEED_BUFF_RING_COLOR = 'rgba(128, 222, 234, 0.8)';   // 加速中的外圈 (speed buff ring)
+export const DAMAGE_BUFF_RING_COLOR = 'rgba(255, 204, 128, 0.8)';  // 強化彈藥中的外圈 (damage buff ring)
 export const GAME_OVER_OVERLAY_COLOR = 'rgba(0, 0, 0, 0.6)';
 export const GAME_OVER_TEXT_COLOR = '#ffffff';
 export const EXIT_CLOSED_COLOR = '#455a64';               // 出口關閉 (exit closed)
@@ -60,6 +71,17 @@ export const EXIT_OPEN_COLOR = '#66bb6a';                 // 出口開啟 (exit 
 export const EXIT_BORDER_COLOR = '#263238';
 export const MESSAGE_BG_COLOR = 'rgba(0, 0, 0, 0.5)';
 export const MESSAGE_TEXT_COLOR = '#ffffff';
+
+// ===== 輔助道具 (items) =====
+export const ITEM_RADIUS = 11;                 // 道具圓形半徑 (item radius)
+export const MEDKIT_HEAL = 30;                 // 醫療包回復量 (medkit heal amount)
+export const ARMOR_AMOUNT = 50;                // 護甲每次增加量 (armor per pickup)
+export const MAX_ARMOR = 100;                  // 護甲上限 (armor cap)
+export const BUFF_DURATION = 15;               // 暫時效果持續秒數 (buff duration in seconds)
+export const ADRENALINE_SPEED_BONUS = 0.4;     // 腎上腺素：移動速度 +40% (speed bonus)
+export const POWER_AMMO_DAMAGE_BONUS = 0.5;    // 強化彈藥：傷害 +50% (damage bonus)
+export const LIFE_ESSENCE_MAX_HP = 10;         // 生命精華：最大 HP +10 (max HP bonus)
+export const QUICK_GLOVES_RELOAD_BONUS = 0.15; // 快手套：換彈速度 +15%，第 7 步換彈系統才會用到 (reload speed bonus)
 
 // ===== 受傷效果與血條 (hit effect & HP bar) =====
 export const HIT_FLASH_TIME = 0.1;        // 受傷閃白幾秒 (flash duration)
