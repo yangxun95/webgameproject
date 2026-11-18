@@ -1,0 +1,20 @@
+/* 移除瀏覽器預設的邊距，背景設成黑色當作 letterbox 黑邊 (reset & letterbox background) */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+/* 用 flex 讓 canvas 永遠置中 (center the canvas) */
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* display: block 可以去掉 canvas 下方多出來的空白 (remove inline gap) */
+canvas {
+  display: block;
+}
