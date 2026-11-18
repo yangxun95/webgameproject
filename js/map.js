@@ -10,6 +10,9 @@ import {
   PLAYER_SPAWN_ROW,
   SAFE_ZONE_RADIUS,
   MAP_GEN_MAX_ATTEMPTS,
+  LOS_STEP,
+  CRATE_HP,
+  ENEMY_MIN_SPAWN_DISTANCE,
   CRATE_COLOR,
   CRATE_EDGE_COLOR,
   ROCK_COLOR,
@@ -53,6 +56,8 @@ export class GameMap {
   constructor() {
     // tiles[row][col]：先選列（y）再選欄（x）(2D array, row first)
     this.tiles = [];
+    // crateHp[row][col]：每個箱子剩多少耐久度，跟 tiles 一樣大 (crate durability per tile)
+    this.crateHp = [];
     this.generate();
   }
 
@@ -84,12 +89,16 @@ export class GameMap {
    */
   fillEmpty() {
     this.tiles = [];
+    this.crateHp = [];
     for (let row = 0; row < MAP_ROWS; row++) {
       const rowTiles = [];
+      const rowHp = [];
       for (let col = 0; col < MAP_COLS; col++) {
         rowTiles.push('empty');
+        rowHp.push(0);
       }
       this.tiles.push(rowTiles);
+      this.crateHp.push(rowHp);
     }
   }
 
@@ -112,6 +121,9 @@ export class GameMap {
       if (this.isInSafeZone(col, row)) continue;
 
       this.tiles[row][col] = type;
+      if (type === 'crate') {
+        this.crateHp[row][col] = CRATE_HP;
+      }
       placed++;
     }
   }
@@ -231,6 +243,92 @@ export class GameMap {
       }
     }
     return false;
+  }
+
+  /**
+   * 某個像素位置是不是陷阱 (is there a trap at this pixel)
+   * @param {number} x 像素 x
+   * @param {number} y 像素 y
+   * @returns {boolean}
+   */
+  isTrapAtPixel(x, y) {
+    const col = Math.floor(x / TILE_SIZE);
+    const row = Math.floor(y / TILE_SIZE);
+    if (!this.isInside(col, row)) return false;
+    return this.tiles[row][col] === 'trap';
+  }
+
+  /**
+   * 對某個像素位置的格子造成傷害；只有箱子會受傷，耐久度歸零就變成空地 (damage a crate)
+   * @param {number} x 像素 x
+   * @param {number} y 像素 y
+   * @param {number} damage 傷害量
+   */
+  damageTileAtPixel(x, y, damage) {
+    const col = Math.floor(x / TILE_SIZE);
+    const row = Math.floor(y / TILE_SIZE);
+    if (!this.isInside(col, row)) return;
+    if (this.tiles[row][col] !== 'crate') return;
+
+    this.crateHp[row][col] -= damage;
+    if (this.crateHp[row][col] <= 0) {
+      this.tiles[row][col] = 'empty'; // 箱子被打破 (crate destroyed)
+    }
+  }
+
+  /**
+   * 兩點之間的視線有沒有被擋住（用「會不會擋子彈」判斷）(line of sight check)
+   * 做法：沿著兩點連線，每隔 LOS_STEP px 檢查一次那個位置。
+   * @param {number} x1 起點 x
+   * @param {number} y1 起點 y
+   * @param {number} x2 終點 x
+   * @param {number} y2 終點 y
+   * @returns {boolean} 沒被擋住回傳 true
+   */
+  hasLineOfSight(x1, y1, x2, y2) {
+    const distance = Math.hypot(x2 - x1, y2 - y1);
+    const steps = Math.ceil(distance / LOS_STEP);
+
+    for (let i = 1; i < steps; i++) {
+      // t 從 0 到 1，代表走到連線的幾分之幾 (t = progress along the line)
+      const t = i / steps;
+      const x = x1 + (x2 - x1) * t;
+      const y = y1 + (y2 - y1) * t;
+      if (this.blocksBulletAtPixel(x, y)) return false;
+    }
+    return true;
+  }
+
+  /**
+   * 隨機挑選敵人的出生位置：空地、離玩家出生點夠遠、不重複 (pick enemy spawn points)
+   * 地圖已經用 BFS 確認全部連通，所以任何空地玩家都走得到。
+   * @param {number} count 要幾個位置
+   * @returns {{x: number, y: number}[]} 像素座標陣列
+   */
+  getEnemySpawnPositions(count) {
+    // 先列出所有合格的格子 (collect all valid tiles)
+    const candidates = [];
+    for (let row = 0; row < MAP_ROWS; row++) {
+      for (let col = 0; col < MAP_COLS; col++) {
+        if (this.tiles[row][col] !== 'empty') continue;
+        const distance = Math.hypot(col - PLAYER_SPAWN_COL, row - PLAYER_SPAWN_ROW);
+        if (distance < ENEMY_MIN_SPAWN_DISTANCE) continue;
+        candidates.push({ col, row });
+      }
+    }
+
+    // 隨機抽出 count 個，抽過的從清單移除，就不會重複 (draw without replacement)
+    const positions = [];
+    for (let i = 0; i < count && candidates.length > 0; i++) {
+      const index = randomInt(candidates.length);
+      const tile = candidates[index];
+      candidates.splice(index, 1);
+      positions.push({
+        x: tile.col * TILE_SIZE + TILE_SIZE / 2,
+        y: tile.row * TILE_SIZE + TILE_SIZE / 2,
+      });
+    }
+    return positions;
   }
 
   /**

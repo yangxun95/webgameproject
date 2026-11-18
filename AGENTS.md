@@ -52,6 +52,7 @@ js/config.js        # 所有遊戲數值
 js/game.js          # 遊戲狀態管理（選單、遊戲中、死亡）與關卡流程
 js/input.js         # 輸入抽象層：統一處理鍵盤、滑鼠與觸控
 js/map.js           # 隨機地圖生成、tile 碰撞、BFS 連通性檢查
+js/character.js     # 角色父類別：移動與撞牆、血量、陷阱、開槍、繪製（Player、Enemy 繼承它）
 js/player.js        # 玩家
 js/enemy.js         # 一般敵人與 BOSS 的 AI
 js/weapons.js       # 武器定義、射擊、換彈、切換
