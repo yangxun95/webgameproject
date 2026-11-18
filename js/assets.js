@@ -15,38 +15,39 @@ export const PIXEL_ART = false;
 // 每個名稱對應一個檔名；null = 還沒有圖片，遊戲會用原本的圖形 (name → file, null = use shapes)
 export const IMAGE_FILES = {
   // ----- 角色：朝「右」畫，遊戲會依瞄準方向旋轉 (characters: face RIGHT) -----
-  player: null,           // 玩家
-  enemy: null,            // 一般敵人
-  boss: null,             // BOSS
+  player: 'player.png',           // 玩家
+  enemy: 'enemy.png',            // 一般敵人
+  boss: 'boss.png',             // BOSS
 
   // ----- 地圖 (map tiles) -----
-  floor: null,            // 地板，會重複鋪滿整張地圖
-  rock: null,             // 石頭
-  crate: null,            // 箱子
-  tree: null,             // 樹木（從上往下看）
-  trap: null,             // 陷阱
-  exit_closed: null,      // 出口（關閉）
-  exit_open: null,        // 出口（開啟）
+  floor: 'floor.png',            // 地板，會重複鋪滿整張地圖
+  floor_alt: 'floor_alt.png',        // 第二種地板（可不畫），和 floor 交錯成棋盤格
+  rock: 'rock.png',             // 石頭
+  crate: 'crate.png',            // 箱子
+  tree: 'tree.png',             // 樹木（從上往下看）
+  trap: 'trap.png',             // 陷阱
+  exit_closed: 'exit_closed.png',      // 出口（關閉）
+  exit_open: 'exit_open.png',        // 出口（開啟）
 
   // ----- 輔助道具 (items) -----
-  item_medkit: null,      // 醫療包
-  item_armor: null,       // 護甲
-  item_adrenaline: null,  // 腎上腺素
-  item_powerAmmo: null,   // 強化彈藥
-  item_lifeEssence: null, // 生命精華
-  item_quickGloves: null, // 快手套
-  ammo: null,             // 彈藥箱
-  potion: null,           // 回血藥（箱子掉落）
+  item_medkit: 'item_medkit.png',      // 醫療包
+  item_armor: 'item_armor.png',       // 護甲
+  item_adrenaline: 'item_adrenaline.png',  // 腎上腺素
+  item_powerAmmo: 'item_powerammo.png',   // 強化彈藥
+  item_lifeEssence: 'item_lifeessence.png', // 生命精華
+  item_quickGloves: 'item_quickgloves.png', // 快手套
+  ammo: 'ammo.png',             // 彈藥箱
+  potion: 'potion.png',           // 回血藥（箱子掉落）
 
   // ----- BOSS 掉落的武器圖示 (weapon icons dropped by bosses) -----
-  weapon_shotgun: null,   // 霰彈槍
-  weapon_smg: null,       // 衝鋒槍
-  weapon_rifle: null,     // 突擊步槍
-  weapon_sniper: null,    // 狙擊槍
-  weapon_grenade: null,   // 榴彈槍
-  weapon_lmg: null,       // 輕機槍
-  weapon_gatling: null,   // 加特林
-  reward_supply: null,    // BOSS 補給箱（武器集滿之後）
+  weapon_shotgun: 'weapon_shotgun.png',   // 霰彈槍
+  weapon_smg: 'weapon_smg.png',       // 衝鋒槍
+  weapon_rifle: 'weapon_rifle.png',     // 突擊步槍
+  weapon_sniper: 'weapon_sniper.png',    // 狙擊槍
+  weapon_grenade: 'weapon_grenade.png',   // 榴彈槍
+  weapon_lmg: 'weapon_lmg.png',       // 輕機槍
+  weapon_gatling: 'weapon_gatling.png',   // 加特林
+  reward_supply: 'reward_supply.png',    // BOSS 補給箱（武器集滿之後）
 };
 
 // 已經載入完成的圖片：名稱 → Image 物件 (loaded images: name → Image)

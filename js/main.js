@@ -1,5 +1,7 @@
 import {
   TILE_SIZE,
+  MAP_COLS,
+  MAP_ROWS,
   GAME_WIDTH,
   GAME_HEIGHT,
   MAX_DELTA_TIME,
@@ -78,6 +80,7 @@ function draw() {
 
 /**
  * 畫地板：有地板圖片就一格一格鋪滿，沒有就用背景色加格線 (draw floor: tiled image or color + grid)
+ * 如果也有 floor_alt，就和 floor 交錯成棋盤格 (checkerboard when floor_alt exists)
  * 地板會蓋掉上一幀的整個畫面，所以每幀一定要先畫它 (also clears the previous frame)
  */
 function drawFloor() {
@@ -90,9 +93,17 @@ function drawFloor() {
     return;
   }
 
-  for (let y = 0; y < GAME_HEIGHT; y += TILE_SIZE) {
-    for (let x = 0; x < GAME_WIDTH; x += TILE_SIZE) {
-      ctx.drawImage(floorImage, x, y, TILE_SIZE, TILE_SIZE);
+  // 沒有第二種地板就全部用同一張 (no floor_alt → use floor everywhere)
+  let altImage = getImage('floor_alt');
+  if (altImage === null) {
+    altImage = floorImage;
+  }
+
+  for (let row = 0; row < MAP_ROWS; row++) {
+    for (let col = 0; col < MAP_COLS; col++) {
+      // (row + col) 是偶數畫 floor、奇數畫 floor_alt，就會變成棋盤格 (even → floor, odd → floor_alt)
+      const image = (row + col) % 2 === 0 ? floorImage : altImage;
+      ctx.drawImage(image, col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
   }
 }
