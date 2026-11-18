@@ -1,6 +1,4 @@
 import {
-  GAME_WIDTH,
-  GAME_HEIGHT,
   BULLET_SPEED,
   BULLET_RADIUS,
   BULLET_COLOR,
@@ -30,18 +28,15 @@ export class Bullet {
   /**
    * 每一幀移動子彈 (move bullet every frame)
    * @param {number} dt 經過秒數 (delta time)
+   * @param {GameMap} map 地圖，用來判斷有沒有撞到障礙物 (map for collision)
    */
-  update(dt) {
+  update(dt, map) {
     this.x += this.vx * dt;
     this.y += this.vy * dt;
 
-    // 飛出畫面就標記移除 (remove when out of screen)
-    if (
-      this.x < -this.radius ||
-      this.x > GAME_WIDTH + this.radius ||
-      this.y < -this.radius ||
-      this.y > GAME_HEIGHT + this.radius
-    ) {
+    // 撞到箱子、石頭，或飛出地圖，就標記移除 (remove on hitting obstacles or leaving map)
+    // 樹木不擋子彈，所以會直接穿過去 (bullets pass through trees)
+    if (map.blocksBulletAtPixel(this.x, this.y)) {
       this.alive = false;
     }
   }

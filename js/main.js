@@ -8,6 +8,7 @@ import {
 } from './config.js';
 import { input, initInput, updateInput } from './input.js';
 import { Player } from './player.js';
+import { GameMap } from './map.js';
 
 // ===== 取得 canvas 和畫筆 (get canvas & context) =====
 const canvas = document.getElementById('game');
@@ -35,8 +36,12 @@ initInput(canvas);
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// 玩家出生在畫面中央 (spawn player at center)
-const player = new Player(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+// 隨機生成地圖，每次重新整理頁面都會不一樣 (random map on every page load)
+const map = new GameMap();
+
+// 玩家出生在地圖指定的出生點 (spawn player at the map's spawn point)
+const spawn = map.getSpawnPosition();
+const player = new Player(spawn.x, spawn.y);
 
 // 畫面上所有的子彈 (all bullets on screen)
 let bullets = [];
@@ -47,11 +52,11 @@ let bullets = [];
  */
 function update(dt) {
   updateInput(player);
-  player.update(dt, input, bullets);
+  player.update(dt, input, bullets, map);
 
   // 移動每一顆子彈 (move every bullet)
   for (const bullet of bullets) {
-    bullet.update(dt);
+    bullet.update(dt, map);
   }
 
   // 只留下還活著的子彈，飛出畫面的丟掉 (remove dead bullets)
@@ -85,6 +90,7 @@ function draw() {
   ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
   drawGrid();
+  map.draw(ctx);
 
   for (const bullet of bullets) {
     bullet.draw(ctx);

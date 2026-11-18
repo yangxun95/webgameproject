@@ -7,6 +7,20 @@ export const MAP_ROWS = 19;                         // 地圖有幾列 (rows)
 export const GAME_WIDTH = TILE_SIZE * MAP_COLS;     // 邏輯寬度 = 800 (logical width)
 export const GAME_HEIGHT = TILE_SIZE * MAP_ROWS;    // 邏輯高度 = 608 (logical height)
 
+// ===== 地圖生成 (map generation) =====
+export const ROCK_COUNT = 30;             // 石頭數量 (number of rocks)
+export const CRATE_COUNT = 20;            // 箱子數量 (number of crates)
+export const TREE_COUNT = 25;             // 樹木數量 (number of trees)
+export const TRAP_COUNT = 8;              // 陷阱數量 (number of traps)
+export const PLAYER_SPAWN_COL = 2;        // 玩家出生在第幾欄 (spawn column)
+export const PLAYER_SPAWN_ROW = 9;        // 玩家出生在第幾列 (spawn row)
+export const SAFE_ZONE_RADIUS = 2;        // 出生點周圍幾格內不放障礙物 (safe zone in tiles)
+export const MAP_GEN_MAX_ATTEMPTS = 100;  // 最多重新生成幾次 (max regeneration attempts)
+
+// ===== 碰撞 (collision) =====
+// 撞牆後往外多推一點點，避免剛好貼在格線上被判定成重疊 (tiny push-out gap)
+export const COLLISION_EPSILON = 0.001;
+
 // ===== Game loop =====
 // 一幀最多算 0.1 秒，避免切換分頁回來時角色瞬間移動很遠 (max delta time per frame)
 export const MAX_DELTA_TIME = 0.1;
@@ -14,6 +28,14 @@ export const MAX_DELTA_TIME = 0.1;
 // ===== 顏色 (colors) =====
 export const BACKGROUND_COLOR = '#2d3a2e';
 export const GRID_COLOR = 'rgba(255, 255, 255, 0.05)';
+export const CRATE_COLOR = '#8d6e63';
+export const CRATE_EDGE_COLOR = '#5d4037';
+export const ROCK_COLOR = '#90a4ae';
+export const ROCK_HIGHLIGHT_COLOR = '#b0bec5';
+export const TREE_COLOR = '#2e7d32';
+export const TREE_HIGHLIGHT_COLOR = '#43a047';
+export const TRAP_COLOR = '#4e342e';
+export const TRAP_SPIKE_COLOR = '#e57373';
 
 // ===== 玩家 (player) =====
 export const PLAYER_RADIUS = 12;          // 玩家圓形半徑，單位 px (radius)

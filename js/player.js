@@ -1,6 +1,6 @@
 import {
-  GAME_WIDTH,
-  GAME_HEIGHT,
+  TILE_SIZE,
+  COLLISION_EPSILON,
   PLAYER_RADIUS,
   PLAYER_SPEED,
   PLAYER_COLOR,
@@ -36,16 +36,14 @@ export class Player {
    * @param {number} dt 距離上一幀經過的秒數 (delta time in seconds)
    * @param {object} input 輸入狀態，來自 input.js (input state)
    * @param {Bullet[]} bullets 子彈陣列，開槍時把新子彈放進去 (bullet list)
+   * @param {GameMap} map 地圖，用來判斷碰撞 (map for collision)
    */
-  update(dt, input, bullets) {
+  update(dt, input, bullets, map) {
     // ----- 移動 (movement) -----
     // 位移 = 方向 × 速度 × 時間 (distance = direction × speed × time)
-    this.x += input.moveX * this.speed * dt;
-    this.y += input.moveY * this.speed * dt;
-
-    // 限制在畫面內，不能走出邊界 (clamp inside the screen)
-    this.x = Math.max(this.radius, Math.min(GAME_WIDTH - this.radius, this.x));
-    this.y = Math.max(this.radius, Math.min(GAME_HEIGHT - this.radius, this.y));
+    // x、y 分開移動，撞牆時才能「貼著牆滑過去」(move each axis separately)
+    this.moveX(input.moveX * this.speed * dt, map);
+    this.moveY(input.moveY * this.speed * dt, map);
 
     // ----- 瞄準 (aim) -----
     this.aimAngle = input.aimAngle;
@@ -57,6 +55,62 @@ export class Player {
     if (input.isShooting && this.shootCooldown === 0) {
       this.shoot(bullets);
       this.shootCooldown = PISTOL_FIRE_INTERVAL;
+    }
+  }
+
+  /**
+   * 碰撞用的方框：把圓形玩家當成正方形處理，計算比較簡單 (hitbox as a square)
+   * @returns {{left: number, top: number, right: number, bottom: number}}
+   */
+  getBox() {
+    return {
+      left: this.x - this.radius,
+      top: this.y - this.radius,
+      right: this.x + this.radius,
+      bottom: this.y + this.radius,
+    };
+  }
+
+  /**
+   * 水平移動，撞到牆就貼齊牆邊 (move horizontally, stop at walls)
+   * 前提：一幀的移動距離小於一格（32px），所以最多只會撞進一欄。
+   * @param {number} dx 這一幀要移動的距離 (distance this frame)
+   * @param {GameMap} map 地圖
+   */
+  moveX(dx, map) {
+    this.x += dx;
+    const box = this.getBox();
+    if (!map.boxBlocksMovement(box.left, box.top, box.right, box.bottom)) return;
+
+    if (dx > 0) {
+      // 往右撞牆：右邊界撞進第 col 欄，退回到那一欄的左邊 (hit a wall on the right)
+      const col = Math.floor(box.right / TILE_SIZE);
+      this.x = col * TILE_SIZE - this.radius - COLLISION_EPSILON;
+    } else if (dx < 0) {
+      // 往左撞牆：左邊界撞進第 col 欄，退回到那一欄的右邊 (hit a wall on the left)
+      const col = Math.floor(box.left / TILE_SIZE);
+      this.x = (col + 1) * TILE_SIZE + this.radius;
+    }
+  }
+
+  /**
+   * 垂直移動，撞到牆就貼齊牆邊 (move vertically, stop at walls)
+   * @param {number} dy 這一幀要移動的距離 (distance this frame)
+   * @param {GameMap} map 地圖
+   */
+  moveY(dy, map) {
+    this.y += dy;
+    const box = this.getBox();
+    if (!map.boxBlocksMovement(box.left, box.top, box.right, box.bottom)) return;
+
+    if (dy > 0) {
+      // 往下撞牆 (hit a wall below)
+      const row = Math.floor(box.bottom / TILE_SIZE);
+      this.y = row * TILE_SIZE - this.radius - COLLISION_EPSILON;
+    } else if (dy < 0) {
+      // 往上撞牆 (hit a wall above)
+      const row = Math.floor(box.top / TILE_SIZE);
+      this.y = (row + 1) * TILE_SIZE + this.radius;
     }
   }
 
