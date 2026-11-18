@@ -36,6 +36,7 @@ export const IMAGE_FILES = {
   item_lifeEssence: null, // 生命精華
   item_quickGloves: null, // 快手套
   ammo: null,             // 彈藥箱
+  potion: null,           // 回血藥（箱子掉落）
 
   // ----- BOSS 掉落的武器圖示 (weapon icons dropped by bosses) -----
   weapon_shotgun: null,   // 霰彈槍

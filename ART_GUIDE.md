@@ -73,6 +73,7 @@
 | `item_lifeEssence` | 生命精華：最大血量提高 | 64×64 |
 | `item_quickGloves` | 快手套：換彈變快 | 64×64 |
 | `ammo` | 彈藥箱 | 64×64 |
+| `potion` | 回血藥：打破箱子有機率掉落，比醫療包小、回得少 | 64×64 |
 
 注意 `item_powerAmmo`、`item_lifeEssence`、`item_quickGloves` 中間有**大寫字母**，這是程式規定的名稱，**檔名本身還是用全小寫**，例如 `item_powerammo.png`。名稱和檔名的對應在下一節說明。
 
