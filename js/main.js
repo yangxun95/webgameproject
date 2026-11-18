@@ -31,20 +31,31 @@ function resizeCanvas() {
 }
 
 // ===== 初始化 (initialize) =====
-initInput();
+initInput(canvas);
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 // 玩家出生在畫面中央 (spawn player at center)
 const player = new Player(GAME_WIDTH / 2, GAME_HEIGHT / 2);
 
+// 畫面上所有的子彈 (all bullets on screen)
+let bullets = [];
+
 /**
  * 更新遊戲狀態 (update game state)
  * @param {number} dt 經過秒數 (delta time)
  */
 function update(dt) {
-  updateInput();
-  player.update(dt, input);
+  updateInput(player);
+  player.update(dt, input, bullets);
+
+  // 移動每一顆子彈 (move every bullet)
+  for (const bullet of bullets) {
+    bullet.update(dt);
+  }
+
+  // 只留下還活著的子彈，飛出畫面的丟掉 (remove dead bullets)
+  bullets = bullets.filter((bullet) => bullet.alive);
 }
 
 /**
@@ -74,6 +85,11 @@ function draw() {
   ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
   drawGrid();
+
+  for (const bullet of bullets) {
+    bullet.draw(ctx);
+  }
+
   player.draw(ctx);
 }
 

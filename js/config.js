@@ -19,3 +19,14 @@ export const GRID_COLOR = 'rgba(255, 255, 255, 0.05)';
 export const PLAYER_RADIUS = 12;          // 玩家圓形半徑，單位 px (radius)
 export const PLAYER_SPEED = 160;          // 移動速度，單位 px/秒 (pixels per second)
 export const PLAYER_COLOR = '#4fc3f7';
+export const GUN_LENGTH = 20;             // 槍管長度，從圓心算起，單位 px (barrel length)
+export const GUN_WIDTH = 6;               // 槍管粗細 (barrel width)
+export const GUN_COLOR = '#cfd8dc';
+
+// ===== 射擊（暫時的手槍設定，第 7 步會改成完整武器系統）(shooting, temporary pistol) =====
+export const PISTOL_FIRE_INTERVAL = 0.3;  // 兩發之間至少間隔幾秒 (seconds between shots)
+
+// ===== 子彈 (bullet) =====
+export const BULLET_SPEED = 500;          // 子彈速度，單位 px/秒 (pixels per second)
+export const BULLET_RADIUS = 3;
+export const BULLET_COLOR = '#ffeb3b';
