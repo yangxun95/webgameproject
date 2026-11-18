@@ -1,5 +1,15 @@
 import { WEAPONS } from './config.js';
 
+/**
+ * 一把槍的理論 DPS（每秒傷害）= 每發傷害 × 彈丸數 ÷ 開槍間隔 (theoretical damage per second)
+ * 例如手槍 10 × 1 ÷ 0.3 ≈ 33。用來決定敵人血量上限。
+ * @param {object} def WEAPONS 裡的一筆規格
+ * @returns {number}
+ */
+export function getWeaponDps(def) {
+  return (def.damage * def.pellets) / def.fireInterval;
+}
+
 // 一把玩家持有的槍 (a weapon the player owns)
 // 武器的「規格」（傷害、射速…）放在 config.js 的 WEAPONS 資料表，這裡用 this.def 指向它；
 // 這把槍「自己的狀態」（彈匣剩幾發、是不是在換彈）才存在這個物件裡。

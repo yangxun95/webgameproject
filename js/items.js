@@ -19,6 +19,12 @@ import {
   AMMO_PICKUP_RADIUS,
   AMMO_PICKUP_COLOR,
   AMMO_PICKUP_TEXT_COLOR,
+  WEAPONS,
+  REWARD_RADIUS,
+  REWARD_COLOR,
+  REWARD_BORDER_COLOR,
+  REWARD_TEXT_COLOR,
+  BOSS_SUPPLY_AMMO_RATIO,
 } from './config.js';
 
 // 六種輔助道具的資料表，對應 AGENTS.md 的道具表格 (item definitions)
@@ -141,6 +147,65 @@ export class AmmoPickup {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('彈', this.x, this.y + 1);
+  }
+}
+
+// BOSS 獎勵：第 N 個 BOSS 掉第 N+1 把槍；武器集滿之後改掉「補給箱」(boss reward)
+//   weaponIndex 是 WEAPONS 中的位置；null 代表補給箱（大量彈藥 + 一個永久道具）
+export class BossReward {
+  /**
+   * 依「第幾個 BOSS」建立獎勵 (create reward for the Nth boss)
+   * @param {number} x 位置 x
+   * @param {number} y 位置 y
+   * @param {number} bossNumber 第幾個 BOSS，從 1 開始 (1-based boss number)
+   */
+  constructor(x, y, bossNumber) {
+    this.x = x;
+    this.y = y;
+    this.radius = REWARD_RADIUS;
+
+    // 手槍在位置 0，所以第 N 個 BOSS 剛好對應位置 N (pistol is index 0, so boss N → index N)
+    this.weaponIndex = bossNumber < WEAPONS.length ? bossNumber : null;
+  }
+
+  /**
+   * 撿起獎勵：給武器，或補給彈藥加永久道具 (apply reward to the player)
+   * @param {Player} player 玩家
+   * @returns {string} 要顯示的訊息
+   */
+  apply(player) {
+    if (this.weaponIndex !== null) {
+      player.giveWeapon(this.weaponIndex);
+      const def = WEAPONS[this.weaponIndex];
+      return `獲得 ${def.name} ${def.nameEn}！（按 ${this.weaponIndex + 1} 切換）`;
+    }
+
+    // 補給箱：所有武器補滿備彈，再隨機給一個永久道具 (supply: refill ammo + random permanent item)
+    player.addAmmoToAll(BOSS_SUPPLY_AMMO_RATIO);
+    const permanentType = Math.random() < 0.5 ? 'lifeEssence' : 'quickGloves';
+    applyItem(permanentType, player);
+    return `補給箱：彈藥補滿 + ${ITEM_TYPES[permanentType].name}`;
+  }
+
+  /**
+   * 畫成金色大圓，武器寫數字鍵、補給箱寫「補」(draw: gold circle with a label)
+   * @param {CanvasRenderingContext2D} ctx 畫筆
+   */
+  draw(ctx) {
+    ctx.fillStyle = REWARD_COLOR;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = REWARD_BORDER_COLOR;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    const label = this.weaponIndex !== null ? `${this.weaponIndex + 1}` : '補';
+    ctx.fillStyle = REWARD_TEXT_COLOR;
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, this.x, this.y + 1);
   }
 }
 

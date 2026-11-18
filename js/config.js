@@ -204,7 +204,8 @@ export const AMMO_PICKUP_COLOR = '#a1887f';
 export const AMMO_PICKUP_TEXT_COLOR = '#ffffff';
 
 // ===== 敵人 (enemy) =====
-export const ENEMY_COUNT = 2;             // 每關敵人數量，第 8 步會改成隨關卡增加 (enemies per stage)
+// 以下是「第 1 關」的基礎數值，之後的關卡依「敵人強度成長」放大 (stage-1 base values)
+export const ENEMY_BASE_COUNT = 2;        // 第 1 關的敵人數量 (enemies in stage 1)
 export const ENEMY_RADIUS = 12;
 export const ENEMY_SPEED = 90;            // 比玩家慢，玩家才逃得掉 (slower than player)
 export const ENEMY_MAX_HP = 30;           // 手槍 3 發打死 (3 pistol shots)
@@ -221,3 +222,38 @@ export const ENEMY_BULLET_RADIUS = 3;
 export const ENEMY_BULLET_COLOR = '#ff7043';
 export const ENEMY_BULLET_SPREAD = 0.15;  // 子彈隨機偏移的最大角度，單位弧度，約 ±8.6° (max spread)
 export const ENEMY_MIN_SPAWN_DISTANCE = 10; // 敵人至少離玩家出生點幾格 (min tiles from player spawn)
+
+// ===== 敵人強度成長 (enemy scaling per stage) =====
+// 第 N 關的倍率 = 1 + 成長率 × (N - 1)，例如血量成長 0.15，第 5 關就是 1.6 倍 (linear growth)
+export const ENEMY_COUNT_MAX = 8;               // 敵人數量上限 (max enemies)
+export const ENEMY_COUNT_STAGES_PER_EXTRA = 2;  // 每過幾關多 1 個敵人 (stages per extra enemy)
+export const ENEMY_HP_GROWTH = 0.15;            // 每關血量 +15% (HP growth per stage)
+export const ENEMY_DAMAGE_GROWTH = 0.08;        // 每關子彈傷害 +8% (damage growth per stage)
+export const ENEMY_FIRE_RATE_GROWTH = 0.03;     // 每關開槍間隔 -3% (fire interval shrink per stage)
+export const ENEMY_MIN_FIRE_INTERVAL_RATIO = 0.5; // 開槍間隔最多縮短到原本的 50% (fire interval floor)
+// 血量上限 = 玩家最強武器的 DPS × 秒數，避免敵人變成打不死的 bullet sponge (HP cap by player DPS)
+export const ENEMY_HP_CAP_SECONDS = 1.0;        // 一般敵人：最多要打 1 秒 (normal enemy)
+export const BOSS_HP_CAP_SECONDS = 12;          // BOSS：最多要打 12 秒 (boss)
+
+// ===== BOSS =====
+export const BOSS_STAGE_INTERVAL = 5;     // 每幾關一次 BOSS (boss every N stages)
+export const BOSS_MINION_COUNT = 2;       // BOSS 關另外帶幾個小兵 (minions in a boss stage)
+export const BOSS_RADIUS = 15;            // 比一般敵人大，但小於半格，才能穿過一格寬的通道 (fits 1-tile gaps)
+export const BOSS_SPEED = 70;
+export const BOSS_MAX_HP = 300;           // 第 1 關基準血量，實際依關卡成長 (base HP)
+export const BOSS_COLOR = '#ab47bc';
+export const BOSS_FIRE_INTERVAL = 1.4;
+export const BOSS_BULLET_DAMAGE = 10;
+export const BOSS_BULLET_SPEED = 260;
+export const BOSS_BULLET_COUNT = 5;       // 一次射幾顆，排成扇形 (bullets per fan)
+export const BOSS_FAN_SPREAD = 0.5;       // 扇形半角，單位弧度，約 ±29° (fan half-angle)
+export const BOSS_BULLET_RADIUS = 4;
+export const BOSS_BULLET_COLOR = '#ce93d8';
+export const BOSS_HP_BAR_WIDTH = 44;
+export const BOSS_SUPPLY_AMMO_RATIO = 1.0; // 集滿武器後，BOSS 補給箱補「備彈上限 × 100%」(supply refill ratio)
+
+// ===== BOSS 獎勵（武器或補給箱）(boss reward) =====
+export const REWARD_RADIUS = 14;
+export const REWARD_COLOR = '#ffd54f';
+export const REWARD_BORDER_COLOR = '#ff8f00';
+export const REWARD_TEXT_COLOR = '#3e2723';

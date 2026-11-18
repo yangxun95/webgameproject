@@ -1,7 +1,11 @@
 import {
   GAME_WIDTH,
   GAME_HEIGHT,
-  ENEMY_COUNT,
+  ENEMY_BASE_COUNT,
+  ENEMY_COUNT_MAX,
+  ENEMY_COUNT_STAGES_PER_EXTRA,
+  BOSS_STAGE_INTERVAL,
+  BOSS_MINION_COUNT,
   MESSAGE_TIME,
   GAME_OVER_INPUT_DELAY,
   MESSAGE_BG_COLOR,
@@ -16,9 +20,9 @@ import {
 import { input, updateInput } from './input.js';
 import { GameMap } from './map.js';
 import { Player } from './player.js';
-import { Enemy } from './enemy.js';
+import { Enemy, Boss, createEnemyStats, createBossStats } from './enemy.js';
 import { Explosion } from './bullet.js';
-import { createRandomItem, applyItem, AmmoPickup } from './items.js';
+import { createRandomItem, applyItem, AmmoPickup, BossReward } from './items.js';
 import { drawWeaponHud } from './ui.js';
 
 /**
@@ -72,10 +76,7 @@ export class Game {
       this.player.y = spawn.y;
     }
 
-    this.enemies = [];
-    for (const pos of this.map.getEnemySpawnPositions(ENEMY_COUNT)) {
-      this.enemies.push(new Enemy(pos.x, pos.y));
-    }
+    this.spawnEnemies();
 
     this.bullets = [];
     this.explosions = [];     // 畫面上的爆炸特效 (explosion visuals)
@@ -88,8 +89,68 @@ export class Game {
     // 最後一個倒下的敵人位置，道具會掉在這裡 (where the last enemy died)
     this.lastEnemyDeathX = 0;
     this.lastEnemyDeathY = 0;
+    // BOSS 掉落的獎勵：null 代表沒有 (boss reward on the ground, null = none)
+    this.bossReward = null;
 
-    this.showMessage(`第 ${this.stage} 關`);
+    if (this.isBossStage()) {
+      this.showMessage(`第 ${this.stage} 關 - BOSS 戰！`);
+    } else {
+      this.showMessage(`第 ${this.stage} 關`);
+    }
+  }
+
+  /**
+   * 這一關是不是 BOSS 關：關卡數能被 5 整除 (is this a boss stage)
+   * @returns {boolean}
+   */
+  isBossStage() {
+    return this.stage % BOSS_STAGE_INTERVAL === 0;
+  }
+
+  /**
+   * 這是第幾個 BOSS：第 5 關是第 1 個、第 10 關是第 2 個 (which boss is this, 1-based)
+   * @returns {number}
+   */
+  getBossNumber() {
+    return this.stage / BOSS_STAGE_INTERVAL;
+  }
+
+  /**
+   * 一般關卡的敵人數量：每過幾關多 1 個，有上限 (enemy count for a normal stage)
+   * 例如第 1~2 關 2 個、第 3~4 關 3 個……最多 8 個。
+   * @returns {number}
+   */
+  getEnemyCount() {
+    const extra = Math.floor((this.stage - 1) / ENEMY_COUNT_STAGES_PER_EXTRA);
+    return Math.min(ENEMY_COUNT_MAX, ENEMY_BASE_COUNT + extra);
+  }
+
+  /**
+   * 依目前關卡產生敵人；BOSS 關是 1 個 BOSS 加幾個小兵 (spawn enemies for this stage)
+   */
+  spawnEnemies() {
+    // 敵人的數值依「關卡」和「玩家最強武器」決定 (stats depend on stage and player's best weapon)
+    const bestDps = this.player.getBestDps();
+    const enemyStats = createEnemyStats(this.stage, bestDps);
+
+    this.enemies = [];
+
+    if (this.isBossStage()) {
+      // 第一個位置給 BOSS，其他給小兵 (first position for the boss, rest for minions)
+      const positions = this.map.getEnemySpawnPositions(1 + BOSS_MINION_COUNT);
+      for (let i = 0; i < positions.length; i++) {
+        const pos = positions[i];
+        if (i === 0) {
+          this.enemies.push(new Boss(pos.x, pos.y, createBossStats(this.stage, bestDps)));
+        } else {
+          this.enemies.push(new Enemy(pos.x, pos.y, enemyStats));
+        }
+      }
+    } else {
+      for (const pos of this.map.getEnemySpawnPositions(this.getEnemyCount())) {
+        this.enemies.push(new Enemy(pos.x, pos.y, enemyStats));
+      }
+    }
   }
 
   /**
@@ -141,6 +202,11 @@ export class Game {
         this.lastEnemyDeathX = enemy.x;
         this.lastEnemyDeathY = enemy.y;
         this.tryDropAmmo(enemy.x, enemy.y, ENEMY_AMMO_DROP_CHANCE);
+
+        // instanceof：檢查這個物件是不是 Boss 這個 class 建立的 (is this enemy a Boss?)
+        if (enemy instanceof Boss) {
+          this.bossReward = new BossReward(enemy.x, enemy.y, this.getBossNumber());
+        }
       }
     }
 
@@ -179,11 +245,22 @@ export class Game {
       this.showMessage('敵人全滅！撿起道具');
     }
 
-    // ----- 撿起道具 → 套用效果，開啟出口 (pick up item: apply it and open the exit) -----
+    // ----- 撿起道具 → 套用效果 (pick up item) -----
     if (this.item !== null && circlesOverlap(this.player, this.item)) {
       applyItem(this.item.type, this.player);
       this.showMessage(this.item.getPickupText());
       this.item = null;
+    }
+
+    // ----- 撿起 BOSS 獎勵：新武器或補給箱 (pick up boss reward) -----
+    if (this.bossReward !== null && circlesOverlap(this.player, this.bossReward)) {
+      this.showMessage(this.bossReward.apply(this.player));
+      this.bossReward = null;
+    }
+
+    // ----- 開啟出口：已清關，而且道具和 BOSS 獎勵都撿完了 (open exit when everything is picked up) -----
+    // BOSS 獎勵也要撿才開，避免玩家不小心錯過新武器 (so the player can't miss the new weapon)
+    if (this.stageCleared && this.item === null && this.bossReward === null && !this.map.exitOpen) {
       this.map.openExit();
     }
 
@@ -316,6 +393,9 @@ export class Game {
     }
     if (this.item !== null) {
       this.item.draw(ctx);
+    }
+    if (this.bossReward !== null) {
+      this.bossReward.draw(ctx);
     }
 
     for (const bullet of this.bullets) {

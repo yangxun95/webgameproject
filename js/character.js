@@ -38,6 +38,7 @@ export class Character {
     this.hp = maxHp;
     this.armor = 0;           // 護甲：受傷時先扣護甲 (armor absorbs damage first)
     this.color = color;
+    this.hpBarWidth = HP_BAR_WIDTH; // 血條寬度，BOSS 會改得比較寬 (HP bar width)
 
     this.aimAngle = 0;        // 瞄準角度 (aim angle)
     this.shootCooldown = 0;   // 還要等幾秒才能開槍 (seconds until next shot)
@@ -208,22 +209,23 @@ export class Character {
    * @param {CanvasRenderingContext2D} ctx 畫筆
    */
   drawHpBar(ctx) {
-    const left = this.x - HP_BAR_WIDTH / 2;
+    const width = this.hpBarWidth;
+    const left = this.x - width / 2;
     const top = this.y - this.radius - HP_BAR_OFFSET;
 
     // 底色 (background)
     ctx.fillStyle = HP_BAR_BG_COLOR;
-    ctx.fillRect(left, top, HP_BAR_WIDTH, HP_BAR_HEIGHT);
+    ctx.fillRect(left, top, width, HP_BAR_HEIGHT);
 
     // 剩餘血量：寬度 = 總寬 × 血量比例 (remaining HP)
     ctx.fillStyle = HP_BAR_COLOR;
-    ctx.fillRect(left, top, HP_BAR_WIDTH * (this.hp / this.maxHp), HP_BAR_HEIGHT);
+    ctx.fillRect(left, top, width * (this.hp / this.maxHp), HP_BAR_HEIGHT);
 
     // 有護甲時，在血條上方再畫一條護甲條，長度以「最大血量」為基準 (armor bar above HP bar)
     if (this.armor > 0) {
       const armorRatio = Math.min(1, this.armor / this.maxHp);
       ctx.fillStyle = ARMOR_BAR_COLOR;
-      ctx.fillRect(left, top - HP_BAR_HEIGHT - 1, HP_BAR_WIDTH * armorRatio, HP_BAR_HEIGHT);
+      ctx.fillRect(left, top - HP_BAR_HEIGHT - 1, width * armorRatio, HP_BAR_HEIGHT);
     }
   }
 }

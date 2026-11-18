@@ -10,7 +10,7 @@ import {
   DAMAGE_BUFF_RING_COLOR,
 } from './config.js';
 import { Character } from './character.js';
-import { Weapon } from './weapons.js';
+import { Weapon, getWeaponDps } from './weapons.js';
 
 // 玩家角色：繼承 Character，只需要寫「玩家專屬」的部分 (player, extends Character)
 export class Player extends Character {
@@ -96,6 +96,20 @@ export class Player extends Character {
         return;
       }
     }
+  }
+
+  /**
+   * 已取得武器中，最高的理論 DPS，用來決定敵人血量上限 (best DPS among owned weapons)
+   * @returns {number}
+   */
+  getBestDps() {
+    let best = 0;
+    for (const weapon of this.weapons) {
+      if (weapon !== null) {
+        best = Math.max(best, getWeaponDps(weapon.def));
+      }
+    }
+    return best;
   }
 
   /**
