@@ -10,6 +10,11 @@ import {
   PLAYER_SPAWN_ROW,
   SAFE_ZONE_RADIUS,
   MAP_GEN_MAX_ATTEMPTS,
+  EXIT_COL,
+  EXIT_SAFE_RADIUS,
+  EXIT_CLOSED_COLOR,
+  EXIT_OPEN_COLOR,
+  EXIT_BORDER_COLOR,
   LOS_STEP,
   CRATE_HP,
   ENEMY_MIN_SPAWN_DISTANCE,
@@ -58,6 +63,12 @@ export class GameMap {
     this.tiles = [];
     // crateHp[row][col]：每個箱子剩多少耐久度，跟 tiles 一樣大 (crate durability per tile)
     this.crateHp = [];
+
+    // 出口位置與狀態：清光敵人後才會開啟 (exit position & state)
+    this.exitCol = EXIT_COL;
+    this.exitRow = 0;
+    this.exitOpen = false;
+
     this.generate();
   }
 
@@ -68,6 +79,9 @@ export class GameMap {
    */
   generate() {
     for (let attempt = 1; attempt <= MAP_GEN_MAX_ATTEMPTS; attempt++) {
+      // 出口的列隨機選，避開最上和最下一列 (random exit row, not on the edges)
+      this.exitRow = randomInt(MAP_ROWS - 2) + 1;
+
       this.fillEmpty();
       this.placeRandom('rock', ROCK_COUNT);
       this.placeRandom('crate', CRATE_COUNT);
@@ -129,15 +143,40 @@ export class GameMap {
   }
 
   /**
-   * 這格是否在玩家出生點附近 (is this tile near the spawn point)
+   * 這格是否在安全區：玩家出生點附近或出口附近 (is this tile near the spawn or the exit)
    * @param {number} col 欄
    * @param {number} row 列
    * @returns {boolean}
    */
   isInSafeZone(col, row) {
-    return (
+    const nearSpawn =
       Math.abs(col - PLAYER_SPAWN_COL) <= SAFE_ZONE_RADIUS &&
-      Math.abs(row - PLAYER_SPAWN_ROW) <= SAFE_ZONE_RADIUS
+      Math.abs(row - PLAYER_SPAWN_ROW) <= SAFE_ZONE_RADIUS;
+    const nearExit =
+      Math.abs(col - this.exitCol) <= EXIT_SAFE_RADIUS &&
+      Math.abs(row - this.exitRow) <= EXIT_SAFE_RADIUS;
+    return nearSpawn || nearExit;
+  }
+
+  // ===== 出口 (exit) =====
+
+  /**
+   * 開啟出口 (open the exit)
+   */
+  openExit() {
+    this.exitOpen = true;
+  }
+
+  /**
+   * 某個像素位置是否站在出口格子上 (is this pixel on the exit tile)
+   * @param {number} x 像素 x
+   * @param {number} y 像素 y
+   * @returns {boolean}
+   */
+  isAtExit(x, y) {
+    return (
+      Math.floor(x / TILE_SIZE) === this.exitCol &&
+      Math.floor(y / TILE_SIZE) === this.exitRow
     );
   }
 
@@ -311,6 +350,7 @@ export class GameMap {
     for (let row = 0; row < MAP_ROWS; row++) {
       for (let col = 0; col < MAP_COLS; col++) {
         if (this.tiles[row][col] !== 'empty') continue;
+        if (col === this.exitCol && row === this.exitRow) continue; // 不要生在出口上 (not on the exit)
         const distance = Math.hypot(col - PLAYER_SPAWN_COL, row - PLAYER_SPAWN_ROW);
         if (distance < ENEMY_MIN_SPAWN_DISTANCE) continue;
         candidates.push({ col, row });
@@ -350,6 +390,8 @@ export class GameMap {
    * @param {CanvasRenderingContext2D} ctx 畫筆
    */
   draw(ctx) {
+    this.drawExit(ctx);
+
     for (let row = 0; row < MAP_ROWS; row++) {
       for (let col = 0; col < MAP_COLS; col++) {
         const type = this.tiles[row][col];
@@ -362,6 +404,27 @@ export class GameMap {
         else if (type === 'trap') drawTrap(ctx, x, y);
       }
     }
+  }
+
+  /**
+   * 畫出口：關閉時灰色，開啟時綠色 (draw exit: gray when closed, green when open)
+   * @param {CanvasRenderingContext2D} ctx 畫筆
+   */
+  drawExit(ctx) {
+    const x = this.exitCol * TILE_SIZE;
+    const y = this.exitRow * TILE_SIZE;
+
+    ctx.fillStyle = this.exitOpen ? EXIT_OPEN_COLOR : EXIT_CLOSED_COLOR;
+    ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+    ctx.strokeStyle = EXIT_BORDER_COLOR;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+
+    ctx.fillStyle = EXIT_BORDER_COLOR;
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('EXIT', x + TILE_SIZE / 2, y + TILE_SIZE / 2);
   }
 }
 

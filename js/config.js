@@ -16,6 +16,13 @@ export const PLAYER_SPAWN_COL = 2;        // 玩家出生在第幾欄 (spawn col
 export const PLAYER_SPAWN_ROW = 9;        // 玩家出生在第幾列 (spawn row)
 export const SAFE_ZONE_RADIUS = 2;        // 出生點周圍幾格內不放障礙物 (safe zone in tiles)
 export const MAP_GEN_MAX_ATTEMPTS = 100;  // 最多重新生成幾次 (max regeneration attempts)
+export const EXIT_COL = 22;               // 出口在第幾欄（列是隨機的）(exit column; row is random)
+export const EXIT_SAFE_RADIUS = 1;        // 出口周圍幾格內不放障礙物 (safe zone around exit)
+
+// ===== 關卡流程 (stage flow) =====
+export const MESSAGE_TIME = 1.5;          // 畫面中央提示文字顯示幾秒 (center message duration)
+// 死亡後至少等幾秒才接受「重新開始」，避免還在狂點射擊時不小心直接重來 (restart input delay)
+export const GAME_OVER_INPUT_DELAY = 1.0;
 
 // ===== 碰撞 (collision) =====
 // 撞牆後往外多推一點點，避免剛好貼在格線上被判定成重疊 (tiny push-out gap)
@@ -48,6 +55,11 @@ export const HP_BAR_BG_COLOR = 'rgba(0, 0, 0, 0.6)';
 export const HP_BAR_COLOR = '#66bb6a';
 export const GAME_OVER_OVERLAY_COLOR = 'rgba(0, 0, 0, 0.6)';
 export const GAME_OVER_TEXT_COLOR = '#ffffff';
+export const EXIT_CLOSED_COLOR = '#455a64';               // 出口關閉 (exit closed)
+export const EXIT_OPEN_COLOR = '#66bb6a';                 // 出口開啟 (exit open)
+export const EXIT_BORDER_COLOR = '#263238';
+export const MESSAGE_BG_COLOR = 'rgba(0, 0, 0, 0.5)';
+export const MESSAGE_TEXT_COLOR = '#ffffff';
 
 // ===== 受傷效果與血條 (hit effect & HP bar) =====
 export const HIT_FLASH_TIME = 0.1;        // 受傷閃白幾秒 (flash duration)

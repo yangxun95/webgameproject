@@ -13,12 +13,16 @@ let mouseY = GAME_HEIGHT / 2;
 // 滑鼠左鍵是否按住 (is left mouse button held)
 let mouseDown = false;
 
+// 有沒有「按了一下」確認鍵，等 updateInput 讀取後就清掉 (confirm pressed, waiting to be read)
+let confirmQueued = false;
+
 // 對外提供的輸入狀態 (input state for the game)
 export const input = {
   moveX: 0,         // 移動方向 x，範圍 -1 ~ 1
   moveY: 0,         // 移動方向 y，範圍 -1 ~ 1
   aimAngle: 0,      // 瞄準角度，單位弧度，0 = 朝右 (aim angle in radians)
-  isShooting: false // 是否正在射擊 (is shooting)
+  isShooting: false, // 是否正在射擊 (is shooting)
+  confirm: false,   // 這一幀是否「剛按下」確認（Enter 或點擊），只會是 true 一幀 (confirm, one frame only)
 };
 
 /**
@@ -44,6 +48,11 @@ export function initInput(canvas) {
   // ----- 鍵盤 (keyboard) -----
   window.addEventListener('keydown', (event) => {
     keysDown.add(event.code);
+
+    // Enter = 確認。event.repeat 代表「按住不放自動重複」，不算新的一次 (ignore auto-repeat)
+    if (event.code === 'Enter' && !event.repeat) {
+      confirmQueued = true;
+    }
   });
 
   window.addEventListener('keyup', (event) => {
@@ -68,6 +77,7 @@ export function initInput(canvas) {
   canvas.addEventListener('mousedown', (event) => {
     if (event.button === 0) {
       mouseDown = true;
+      confirmQueued = true; // 點擊畫面也算確認 (a click also counts as confirm)
     }
   });
 
@@ -114,4 +124,8 @@ export function updateInput(player) {
 
   // ----- 射擊 (shooting) -----
   input.isShooting = mouseDown;
+
+  // ----- 確認：讀完就清掉，所以只會是 true 一幀 (confirm: read once, then reset) -----
+  input.confirm = confirmQueued;
+  confirmQueued = false;
 }
