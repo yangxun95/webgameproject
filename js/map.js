@@ -27,6 +27,7 @@ import {
   TRAP_COLOR,
   TRAP_SPIKE_COLOR,
 } from './config.js';
+import { getImage } from './assets.js';
 
 // 每一種 tile 的特性，對應 AGENTS.md 的地圖表格 (tile properties)
 // blocksMovement：會不會擋住移動；blocksBullet：會不會擋住子彈
@@ -459,8 +460,18 @@ export class GameMap {
     for (let row = 0; row < MAP_ROWS; row++) {
       for (let col = 0; col < MAP_COLS; col++) {
         const type = this.tiles[row][col];
+        if (type === 'empty') continue;
+
         const x = col * TILE_SIZE; // 格子左上角 (tile top-left)
         const y = row * TILE_SIZE;
+
+        // 有美術圖片就畫圖片，剛好填滿一格；沒有就用下面的圖形畫 (sprite fills the tile, else shapes)
+        // tile 的種類名稱（'rock'、'crate'…）剛好就是圖片名稱 (tile type = image name)
+        const image = getImage(type);
+        if (image !== null) {
+          ctx.drawImage(image, x, y, TILE_SIZE, TILE_SIZE);
+          continue;
+        }
 
         if (type === 'crate') drawCrate(ctx, x, y);
         else if (type === 'rock') drawRock(ctx, x, y);
@@ -477,6 +488,12 @@ export class GameMap {
   drawExit(ctx) {
     const x = this.exitCol * TILE_SIZE;
     const y = this.exitRow * TILE_SIZE;
+
+    const image = getImage(this.exitOpen ? 'exit_open' : 'exit_closed');
+    if (image !== null) {
+      ctx.drawImage(image, x, y, TILE_SIZE, TILE_SIZE);
+      return;
+    }
 
     ctx.fillStyle = this.exitOpen ? EXIT_OPEN_COLOR : EXIT_CLOSED_COLOR;
     ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);

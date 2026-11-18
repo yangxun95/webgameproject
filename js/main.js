@@ -8,6 +8,7 @@ import {
 } from './config.js';
 import { initInput } from './input.js';
 import { Game } from './game.js';
+import { loadImages, getImage, PIXEL_ART } from './assets.js';
 
 // main.js 只負責「啟動」：準備 canvas、縮放、game loop。
 // 遊戲內容（關卡、玩家、敵人）都交給 game.js。(main.js only boots the game)
@@ -33,7 +34,12 @@ function resizeCanvas() {
   canvas.style.height = `${GAME_HEIGHT * scale}px`;
 }
 
+// 像素風格圖片放大時不要變模糊 (keep pixel art sharp when scaled)
+// 這個設定在改 canvas.width 之後會被重設，所以放在設定尺寸之後 (must be set after resizing the canvas)
+ctx.imageSmoothingEnabled = !PIXEL_ART;
+
 // ===== 初始化 (initialize) =====
+loadImages();   // 開始下載美術圖片，不用等它，遊戲先開始 (start loading images, don't wait)
 initInput(canvas);
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
@@ -66,12 +72,29 @@ function drawGrid() {
  * 畫出整個畫面 (render one frame)
  */
 function draw() {
-  // 先用背景色蓋掉上一幀的畫面 (clear previous frame)
-  ctx.fillStyle = BACKGROUND_COLOR;
-  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-
-  drawGrid();
+  drawFloor();
   game.draw(ctx);
+}
+
+/**
+ * 畫地板：有地板圖片就一格一格鋪滿，沒有就用背景色加格線 (draw floor: tiled image or color + grid)
+ * 地板會蓋掉上一幀的整個畫面，所以每幀一定要先畫它 (also clears the previous frame)
+ */
+function drawFloor() {
+  const floorImage = getImage('floor');
+
+  if (floorImage === null) {
+    ctx.fillStyle = BACKGROUND_COLOR;
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    drawGrid();
+    return;
+  }
+
+  for (let y = 0; y < GAME_HEIGHT; y += TILE_SIZE) {
+    for (let x = 0; x < GAME_WIDTH; x += TILE_SIZE) {
+      ctx.drawImage(floorImage, x, y, TILE_SIZE, TILE_SIZE);
+    }
+  }
 }
 
 // ===== Game loop =====

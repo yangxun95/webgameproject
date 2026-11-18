@@ -99,6 +99,7 @@ export function createEnemyStats(stage, playerBestDps) {
     bulletRadius: ENEMY_BULLET_RADIUS,
     bulletColor: ENEMY_BULLET_COLOR,
     hpBarWidth: undefined, // 用預設寬度 (use default width)
+    imageName: 'enemy',    // 美術圖片名稱 (sprite name)
   };
 }
 
@@ -123,6 +124,7 @@ export function createBossStats(stage, playerBestDps) {
     bulletRadius: BOSS_BULLET_RADIUS,
     bulletColor: BOSS_BULLET_COLOR,
     hpBarWidth: BOSS_HP_BAR_WIDTH,
+    imageName: 'boss',
   };
 }
 
@@ -142,6 +144,7 @@ export class Enemy extends Character {
     if (stats.hpBarWidth !== undefined) {
       this.hpBarWidth = stats.hpBarWidth;
     }
+    this.imageName = stats.imageName;
     this.fireInterval = stats.fireInterval;
 
     // 這個敵人射出的子彈數值 (bullet stats for this enemy)

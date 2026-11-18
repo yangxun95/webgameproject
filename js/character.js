@@ -14,8 +14,11 @@ import {
   HP_BAR_BG_COLOR,
   HP_BAR_COLOR,
   ARMOR_BAR_COLOR,
+  CHARACTER_SPRITE_SCALE,
+  HIT_FLASH_ALPHA,
 } from './config.js';
 import { Bullet } from './bullet.js';
+import { getImage } from './assets.js';
 
 // 角色的共同父類別：玩家和敵人都繼承它 (base class for player and enemies)
 // 放在這裡的功能：移動與撞牆、血量與受傷、陷阱、開槍、畫出身體和血條。
@@ -39,6 +42,7 @@ export class Character {
     this.armor = 0;           // 護甲：受傷時先扣護甲 (armor absorbs damage first)
     this.color = color;
     this.hpBarWidth = HP_BAR_WIDTH; // 血條寬度，BOSS 會改得比較寬 (HP bar width)
+    this.imageName = '';            // 美術圖片名稱，對應 assets.js；子類別會設定 (sprite name, set by subclasses)
 
     this.aimAngle = 0;        // 瞄準角度 (aim angle)
     this.shootCooldown = 0;   // 還要等幾秒才能開槍 (seconds until next shot)
@@ -184,6 +188,47 @@ export class Character {
    * @param {CanvasRenderingContext2D} ctx 畫筆
    */
   draw(ctx) {
+    // 有美術圖片就畫圖片，沒有就畫原本的圓形 (sprite if available, otherwise shapes)
+    const image = getImage(this.imageName);
+    if (image !== null) {
+      this.drawSprite(ctx, image);
+    } else {
+      this.drawShape(ctx);
+    }
+    this.drawHpBar(ctx);
+  }
+
+  /**
+   * 畫圖片：依瞄準方向旋轉，受傷時疊一層半透明白色 (draw rotated sprite)
+   * @param {CanvasRenderingContext2D} ctx 畫筆
+   * @param {HTMLImageElement} image 圖片
+   */
+  drawSprite(ctx, image) {
+    const size = this.radius * CHARACTER_SPRITE_SCALE;
+
+    // save / restore：先存下畫筆狀態，旋轉畫完再還原，才不會影響之後畫的東西 (save & restore canvas state)
+    ctx.save();
+    ctx.translate(this.x, this.y);   // 把原點移到角色中心 (move origin to the character)
+    ctx.rotate(this.aimAngle);       // 整張畫布轉到瞄準方向，圖片要朝右畫 (rotate; sprite faces right)
+    ctx.drawImage(image, -size / 2, -size / 2, size, size); // 以原點為中心畫圖 (centered on origin)
+    ctx.restore();
+
+    // 受傷閃白：在身體上疊一個半透明白圓 (hit flash overlay)
+    if (this.hitFlashTimer > 0) {
+      ctx.globalAlpha = HIT_FLASH_ALPHA;
+      ctx.fillStyle = HIT_FLASH_COLOR;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /**
+   * 沒有圖片時的畫法：一條槍管 + 圓形身體 (fallback shapes: barrel + circle)
+   * @param {CanvasRenderingContext2D} ctx 畫筆
+   */
+  drawShape(ctx) {
     // 槍管 (gun barrel)
     ctx.strokeStyle = GUN_COLOR;
     ctx.lineWidth = GUN_WIDTH;
@@ -200,8 +245,6 @@ export class Character {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
-
-    this.drawHpBar(ctx);
   }
 
   /**

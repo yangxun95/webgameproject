@@ -22,6 +22,7 @@ export class Player extends Character {
   constructor(x, y) {
     // super(...) 呼叫父類別的 constructor，把共同的屬性設定好 (call parent constructor)
     super(x, y, PLAYER_RADIUS, PLAYER_SPEED, PLAYER_MAX_HP, PLAYER_COLOR);
+    this.imageName = 'player';
 
     // 暫時效果的剩餘秒數，> 0 代表效果中 (buff time left, active while > 0)
     this.speedBuffTimer = 0;    // 腎上腺素 (adrenaline)

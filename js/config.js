@@ -144,6 +144,12 @@ export const NEW_RECORD_COLOR = '#ffd54f';
 // 開始提示的閃爍週期，單位秒 (blink period of the "press to start" hint)
 export const MENU_BLINK_PERIOD = 1.0;
 
+// ===== 美術圖片 (sprites) =====
+// 角色圖片的顯示大小 = 角色半徑 × 這個倍數。例如玩家半徑 12 → 圖片畫成 36×36 (sprite size = radius × scale)
+// 圖片比身體大，是為了留空間給槍；碰撞範圍不受圖片大小影響 (bigger than the body to fit the gun)
+export const CHARACTER_SPRITE_SCALE = 3;
+export const HIT_FLASH_ALPHA = 0.6;       // 有圖片時，受傷閃白的透明度 (flash opacity over sprites)
+
 // ===== 受傷效果與血條 (hit effect & HP bar) =====
 export const HIT_FLASH_TIME = 0.1;        // 受傷閃白幾秒 (flash duration)
 export const HP_BAR_WIDTH = 28;

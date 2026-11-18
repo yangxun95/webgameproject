@@ -5,7 +5,9 @@
 ## 專案背景
 
 - 資管系三年級 C 班「網路程式設計」期末報告。
-- 開發者技術基礎較淺，**目前只有一位開發者**。AI 的角色是「邊做邊教」的協作者，不只是幫忙寫完。
+- 成員有兩位：
+  - **開發者**：負責程式，技術基礎較淺。AI 的角色是「邊做邊教」的協作者，不只是幫忙寫完。
+  - **美術協作者**：負責圖片，不一定會寫程式。只動 `assets/images/` 和 `js/assets.js` 的 `IMAGE_FILES`，規格寫在 `ART_GUIDE.md`。
 - 目標：一款 **2D 俯視（top-down）單機 roguelike 射擊 RPG web game**，電腦與手機瀏覽器都能玩；報告時會讓同學用手機掃 QR code 試玩。
 
 ## 溝通與教學規則（最重要）
@@ -19,6 +21,7 @@
    4. **動手驗證**：告訴開發者怎麼開啟遊戲、要操作什麼、預期看到什麼結果。
 4. 有多種做法時，選**最容易理解**的那種，並簡短說明為什麼不選其他做法。
 5. 報告時開發者要能自己講解程式碼，所以避免炫技寫法：不用過度抽象、不用 meta-programming，避免很長的鏈式寫法。
+6. **對象是美術協作者時**（例如被要求換圖、調整圖片顯示）：不需要四段式程式教學，改用非工程師也懂的說法，重點放在「圖要怎麼畫、放哪裡、怎麼確認效果」，並以 `ART_GUIDE.md` 為準。
 
 ## 程式碼規範
 
@@ -45,10 +48,13 @@
 ## 預計檔案結構
 
 ```
-index.html          # 入口頁，只放 <canvas> 和載入 main.js
-css/style.css       # 版面、全螢幕、手機虛擬搖桿樣式
+index.html          # 入口頁，只放 <canvas>、直向提示和載入 main.js
+ART_GUIDE.md        # 給美術協作者的圖片規格與交付流程
+assets/images/      # 美術圖片（PNG，檔名全小寫）
+css/style.css       # 版面、全螢幕、手機觸控設定、直向提示
 js/main.js          # 程式進入點，啟動 game loop
 js/config.js        # 所有遊戲數值
+js/assets.js        # 圖片清單 IMAGE_FILES 與載入；沒有圖片時回傳 null
 js/game.js          # 遊戲狀態管理（選單、遊戲中、死亡）與關卡流程
 js/input.js         # 輸入抽象層：統一處理鍵盤、滑鼠與觸控
 js/map.js           # 隨機地圖生成、tile 碰撞、BFS 連通性檢查
@@ -66,6 +72,9 @@ js/ui.js            # HUD（血量、護甲、彈藥、關卡數）與選單畫�
 - **Game loop** 使用 `requestAnimationFrame`，所有移動與計時都乘以 **delta time（秒）**。手機螢幕有 60Hz 和 120Hz，不用 delta time 的話遊戲速度會不一致。
 - **固定邏輯解析度**：遊戲世界固定 800×608（25×19 格，每格 32px），canvas 依螢幕大小等比例縮放（letterbox）。遊戲邏輯只使用邏輯座標，輸入座標要先換算成邏輯座標再使用。
 - **輸入抽象層**：`input.js` 對外只提供 `moveX/moveY`、`aimAngle`、`isShooting`、`reload`、`switchWeapon` 等狀態。player 不直接處理鍵盤或觸控事件，這樣電腦版和手機版可以共用同一套遊戲邏輯。
+- **圖片一律要有後備圖形（fallback）**：所有會畫到畫面上的東西，都先用 `getImage(名稱)` 取圖片，拿到 `null` 就用原本的 canvas 圖形畫。新增任何需要美術的東西時，也要同時寫好後備圖形，並在 `IMAGE_FILES` 和 `ART_GUIDE.md` 加上對應的名稱與規格。
+- **圖片只影響外觀**：碰撞、射程等遊戲邏輯只看 `config.js` 的數值，不可以依賴圖片尺寸。
+- **角色圖片朝右畫**，繪製時用 `ctx.save()` / `translate` / `rotate(aimAngle)` / `restore()` 旋轉。
 
 ## 操作方式
 
@@ -158,5 +167,8 @@ js/ui.js            # HUD（血量、護甲、彈藥、關卡數）與選單畫�
 
 ## Git 規則
 
+- **`main` 是穩定版本**，也是 GitHub Pages 部署的來源，不要直接在 `main` 上改。
+- 每個人在自己的分支工作，完成後開 Pull Request 合併到 `main`：程式用功能分支，美術用 `art` 分支。
+- 程式和美術盡量不要同時改同一個檔案。唯一的交集是 `js/assets.js` 的 `IMAGE_FILES`：美術只改裡面的 `null` → 檔名；開發者若要新增圖片名稱，先合併到 `main`，再通知美術更新分支。
 - 每完成一個小功能並驗證可以執行後才 commit。
 - Commit message 使用繁體中文，格式為 `類型: 說明`，類型包括 `feat`（新功能）、`fix`（修 bug）、`docs`（文件）、`refactor`（重構）、`style`（樣式）。例如：`feat: 新增玩家 WASD 移動`。

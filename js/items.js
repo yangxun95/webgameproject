@@ -26,6 +26,19 @@ import {
   REWARD_TEXT_COLOR,
   BOSS_SUPPLY_AMMO_RATIO,
 } from './config.js';
+import { getImage } from './assets.js';
+
+/**
+ * 以 (x, y) 為中心畫一張正方形圖片 (draw a square image centered at a point)
+ * @param {CanvasRenderingContext2D} ctx 畫筆
+ * @param {HTMLImageElement} image 圖片
+ * @param {number} x 中心 x
+ * @param {number} y 中心 y
+ * @param {number} size 邊長
+ */
+function drawImageCentered(ctx, image, x, y, size) {
+  ctx.drawImage(image, x - size / 2, y - size / 2, size, size);
+}
 
 // 六種輔助道具的資料表，對應 AGENTS.md 的道具表格 (item definitions)
 // label：畫在道具上的字；name：道具名稱；description：撿到時顯示的說明
@@ -102,6 +115,13 @@ export class Item {
   draw(ctx) {
     const info = ITEM_TYPES[this.type];
 
+    // 有美術圖片就畫圖片，圖片名稱是 item_ 加上道具種類，例如 item_medkit (sprite: 'item_' + type)
+    const image = getImage(`item_${this.type}`);
+    if (image !== null) {
+      drawImageCentered(ctx, image, this.x, this.y, this.radius * 2);
+      return;
+    }
+
     ctx.fillStyle = info.color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -139,6 +159,13 @@ export class AmmoPickup {
    */
   draw(ctx) {
     const size = this.radius * 2;
+
+    const image = getImage('ammo');
+    if (image !== null) {
+      drawImageCentered(ctx, image, this.x, this.y, size);
+      return;
+    }
+
     ctx.fillStyle = AMMO_PICKUP_COLOR;
     ctx.fillRect(this.x - this.radius, this.y - this.radius, size, size);
 
@@ -188,7 +215,7 @@ export class BossReward {
   }
 
   /**
-   * 畫成金色大圓，武器寫數字鍵、補給箱寫「補」(draw: gold circle with a label)
+   * 畫成金色大圓，上面放武器圖示；沒有圖示就寫數字鍵或「補」(draw: gold circle with icon or label)
    * @param {CanvasRenderingContext2D} ctx 畫筆
    */
   draw(ctx) {
@@ -199,6 +226,16 @@ export class BossReward {
     ctx.strokeStyle = REWARD_BORDER_COLOR;
     ctx.lineWidth = 3;
     ctx.stroke();
+
+    // 圖示名稱：武器是 weapon_ 加上武器 id，例如 weapon_shotgun；補給箱是 reward_supply (icon name)
+    const imageName = this.weaponIndex !== null
+      ? `weapon_${WEAPONS[this.weaponIndex].id}`
+      : 'reward_supply';
+    const image = getImage(imageName);
+    if (image !== null) {
+      drawImageCentered(ctx, image, this.x, this.y, this.radius * 2);
+      return;
+    }
 
     const label = this.weaponIndex !== null ? `${this.weaponIndex + 1}` : '補';
     ctx.fillStyle = REWARD_TEXT_COLOR;
