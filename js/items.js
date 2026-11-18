@@ -16,6 +16,9 @@ import {
   POWER_AMMO_COLOR,
   LIFE_ESSENCE_COLOR,
   QUICK_GLOVES_COLOR,
+  AMMO_PICKUP_RADIUS,
+  AMMO_PICKUP_COLOR,
+  AMMO_PICKUP_TEXT_COLOR,
 } from './config.js';
 
 // 六種輔助道具的資料表，對應 AGENTS.md 的道具表格 (item definitions)
@@ -107,6 +110,37 @@ export class Item {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(info.label, this.x, this.y + 1);
+  }
+}
+
+// 地上的彈藥箱：敵人或箱子掉落，撿到會補充所有武器的備彈 (ammo pickup)
+export class AmmoPickup {
+  /**
+   * 建立彈藥 (create ammo pickup)
+   * @param {number} x 位置 x
+   * @param {number} y 位置 y
+   */
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = AMMO_PICKUP_RADIUS;
+    this.pickedUp = false;  // 被撿走後設成 true，等著被移除 (marked for removal)
+  }
+
+  /**
+   * 畫成一個小方塊，上面寫「彈」(draw as a small box)
+   * @param {CanvasRenderingContext2D} ctx 畫筆
+   */
+  draw(ctx) {
+    const size = this.radius * 2;
+    ctx.fillStyle = AMMO_PICKUP_COLOR;
+    ctx.fillRect(this.x - this.radius, this.y - this.radius, size, size);
+
+    ctx.fillStyle = AMMO_PICKUP_TEXT_COLOR;
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('彈', this.x, this.y + 1);
   }
 }
 

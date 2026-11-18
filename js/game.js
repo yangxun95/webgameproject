@@ -8,12 +8,18 @@ import {
   MESSAGE_TEXT_COLOR,
   GAME_OVER_OVERLAY_COLOR,
   GAME_OVER_TEXT_COLOR,
+  BULLET_STEP_SIZE,
+  ENEMY_AMMO_DROP_CHANCE,
+  CRATE_AMMO_DROP_CHANCE,
+  AMMO_PICKUP_RATIO,
 } from './config.js';
 import { input, updateInput } from './input.js';
 import { GameMap } from './map.js';
 import { Player } from './player.js';
 import { Enemy } from './enemy.js';
-import { createRandomItem, applyItem } from './items.js';
+import { Explosion } from './bullet.js';
+import { createRandomItem, applyItem, AmmoPickup } from './items.js';
+import { drawWeaponHud } from './ui.js';
 
 /**
  * 兩個圓有沒有重疊：圓心距離 < 兩個半徑相加 (circle-circle collision)
@@ -72,6 +78,8 @@ export class Game {
     }
 
     this.bullets = [];
+    this.explosions = [];     // 畫面上的爆炸特效 (explosion visuals)
+    this.ammoPickups = [];    // 地上的彈藥 (ammo on the ground)
 
     // 這一關的道具：null 代表地上沒有道具 (item on the ground, null = none)
     this.item = null;
@@ -121,23 +129,40 @@ export class Game {
       enemy.update(dt, this.player, this.bullets, this.map);
     }
 
-    for (const bullet of this.bullets) {
-      bullet.update(dt, this.map);
+    this.updateBullets(dt);
+
+    for (const explosion of this.explosions) {
+      explosion.update(dt);
     }
 
-    this.checkBulletHits();
-
-    // 移除前先記下死掉敵人的位置，道具要掉在這裡 (remember where enemies died)
+    // 移除前先記下死掉敵人的位置，道具要掉在這裡；也有機率掉彈藥 (enemy deaths: remember position, maybe drop ammo)
     for (const enemy of this.enemies) {
       if (enemy.isDead()) {
         this.lastEnemyDeathX = enemy.x;
         this.lastEnemyDeathY = enemy.y;
+        this.tryDropAmmo(enemy.x, enemy.y, ENEMY_AMMO_DROP_CHANCE);
       }
     }
 
-    // 清除死掉的子彈和敵人 (remove dead bullets and enemies)
+    // 被打破的箱子也有機率掉彈藥，讀完就清空清單 (broken crates may drop ammo)
+    for (const crate of this.map.brokenCrates) {
+      this.tryDropAmmo(crate.x, crate.y, CRATE_AMMO_DROP_CHANCE);
+    }
+    this.map.brokenCrates = [];
+
+    // 撿彈藥 (pick up ammo)
+    for (const ammo of this.ammoPickups) {
+      if (circlesOverlap(this.player, ammo)) {
+        this.player.addAmmoToAll(AMMO_PICKUP_RATIO);
+        ammo.pickedUp = true;
+      }
+    }
+
+    // 清除死掉的子彈、敵人、結束的爆炸、撿走的彈藥 (remove finished objects)
     this.bullets = this.bullets.filter((bullet) => bullet.alive);
     this.enemies = this.enemies.filter((enemy) => !enemy.isDead());
+    this.explosions = this.explosions.filter((explosion) => !explosion.isDone());
+    this.ammoPickups = this.ammoPickups.filter((ammo) => !ammo.pickedUp);
 
     // ----- 玩家死亡 (player died) -----
     if (this.player.isDead()) {
@@ -180,26 +205,100 @@ export class Game {
     }
   }
 
-  /**
-   * 檢查子彈有沒有打中角色 (check bullet hits)
-   * 玩家的子彈只打敵人，敵人的子彈只打玩家，不會打到自己人。
-   */
-  checkBulletHits() {
-    for (const bullet of this.bullets) {
-      if (!bullet.alive) continue;
+  // ===== 子彈、爆炸、彈藥 (bullets, explosions, ammo) =====
 
-      if (bullet.owner === 'player') {
-        for (const enemy of this.enemies) {
-          if (circlesOverlap(bullet, enemy)) {
-            enemy.takeDamage(bullet.damage);
-            bullet.alive = false;
-            break; // 一顆子彈只打中一個敵人 (one bullet, one hit)
-          }
+  /**
+   * 移動所有子彈；每顆子彈把這一幀切成好幾小段，每段都檢查碰撞 (move bullets with sub-steps)
+   * 為什麼要切？狙擊槍子彈一幀可能飛 100px 以上，一次飛完會直接「跳過」中間的牆或敵人。
+   * 切成每段最多 BULLET_STEP_SIZE（8px），就不會漏掉。
+   * @param {number} dt 經過秒數
+   */
+  updateBullets(dt) {
+    for (const bullet of this.bullets) {
+      const distance = bullet.speed * dt;
+      const steps = Math.max(1, Math.ceil(distance / BULLET_STEP_SIZE));
+      const stepDt = dt / steps;
+
+      for (let i = 0; i < steps && bullet.alive; i++) {
+        bullet.update(stepDt, this.map);
+        if (bullet.alive) {
+          this.checkBulletHit(bullet);
         }
-      } else if (circlesOverlap(bullet, this.player)) {
+      }
+
+      // 爆炸彈不管是撞牆、打中敵人還是飛到射程盡頭，消失的那一刻都會爆炸 (explode on death)
+      if (!bullet.alive && bullet.isExplosive()) {
+        this.explode(bullet.x, bullet.y, bullet.explosionRadius, bullet.damage);
+      }
+    }
+  }
+
+  /**
+   * 檢查一顆子彈有沒有打中角色 (check one bullet against characters)
+   * 玩家的子彈只打敵人，敵人的子彈只打玩家，不會打到自己人。
+   * @param {Bullet} bullet 子彈
+   */
+  checkBulletHit(bullet) {
+    if (bullet.owner === 'enemy') {
+      if (circlesOverlap(bullet, this.player)) {
         this.player.takeDamage(bullet.damage);
         bullet.alive = false;
       }
+      return;
+    }
+
+    for (const enemy of this.enemies) {
+      if (enemy.isDead()) continue;
+      if (bullet.hitEnemies.has(enemy)) continue; // 貫穿彈已經打過這個敵人 (already hit)
+      if (!circlesOverlap(bullet, enemy)) continue;
+
+      if (bullet.isExplosive()) {
+        // 榴彈打中敵人：不直接扣血，消失後由爆炸造成範圍傷害 (grenade: damage comes from the explosion)
+        bullet.alive = false;
+        return;
+      }
+
+      enemy.takeDamage(bullet.damage);
+
+      if (bullet.pierce) {
+        bullet.hitEnemies.add(enemy); // 記下來，繼續往前飛 (remember, keep flying)
+      } else {
+        bullet.alive = false;
+        return; // 一顆子彈只打中一個敵人 (one bullet, one hit)
+      }
+    }
+  }
+
+  /**
+   * 在某個位置爆炸：範圍內的敵人和箱子都受到傷害，並產生爆炸特效 (explode)
+   * 玩家不會被自己的爆炸炸到，比較好玩。(the player is immune to own explosions)
+   * @param {number} x 中心 x
+   * @param {number} y 中心 y
+   * @param {number} radius 半徑
+   * @param {number} damage 傷害
+   */
+  explode(x, y, radius, damage) {
+    for (const enemy of this.enemies) {
+      // 敵人身體任何一部分在爆炸範圍內就算：距離 < 爆炸半徑 + 敵人半徑 (any part inside the blast)
+      if (Math.hypot(enemy.x - x, enemy.y - y) < radius + enemy.radius) {
+        enemy.takeDamage(damage);
+      }
+    }
+    this.map.damageTilesInRadius(x, y, radius, damage);
+    this.explosions.push(new Explosion(x, y, radius));
+  }
+
+  /**
+   * 依機率在某個位置掉落彈藥；玩家沒有需要彈藥的槍就不掉 (maybe drop ammo)
+   * @param {number} x 位置 x
+   * @param {number} y 位置 y
+   * @param {number} chance 機率 0 ~ 1
+   */
+  tryDropAmmo(x, y, chance) {
+    if (!this.player.needsAmmo()) return;
+    // Math.random() < 0.4 的機率剛好是 40% (random() < chance happens with that probability)
+    if (Math.random() < chance) {
+      this.ammoPickups.push(new AmmoPickup(x, y));
     }
   }
 
@@ -212,6 +311,9 @@ export class Game {
   draw(ctx) {
     this.map.draw(ctx);
 
+    for (const ammo of this.ammoPickups) {
+      ammo.draw(ctx);
+    }
     if (this.item !== null) {
       this.item.draw(ctx);
     }
@@ -223,6 +325,12 @@ export class Game {
       enemy.draw(ctx);
     }
     this.player.draw(ctx);
+
+    for (const explosion of this.explosions) {
+      explosion.draw(ctx);
+    }
+
+    drawWeaponHud(ctx, this.player);
 
     if (this.messageTimer > 0) {
       this.drawMessage(ctx);

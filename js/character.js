@@ -166,15 +166,14 @@ export class Character {
    * 從槍口朝指定角度射出一顆子彈 (fire one bullet from the muzzle)
    * @param {Bullet[]} bullets 子彈陣列
    * @param {number} angle 子彈飛行角度
-   * @param {number} speed 子彈速度
-   * @param {number} damage 子彈傷害
    * @param {string} owner 誰射的：'player' 或 'enemy'
+   * @param {object} stats 子彈數值，格式見 bullet.js (bullet stats)
    */
-  shootBullet(bullets, angle, speed, damage, owner) {
+  shootBullet(bullets, angle, owner, stats) {
     // 槍口位置 = 圓心 + 往瞄準方向走 GUN_LENGTH (muzzle position)
     const muzzleX = this.x + Math.cos(this.aimAngle) * GUN_LENGTH;
     const muzzleY = this.y + Math.sin(this.aimAngle) * GUN_LENGTH;
-    bullets.push(new Bullet(muzzleX, muzzleY, angle, speed, damage, owner));
+    bullets.push(new Bullet(muzzleX, muzzleY, angle, owner, stats));
   }
 
   // ===== 繪製 (drawing) =====

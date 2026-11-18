@@ -11,8 +11,22 @@ import {
   ENEMY_BULLET_SPEED,
   ENEMY_BULLET_DAMAGE,
   ENEMY_BULLET_SPREAD,
+  ENEMY_BULLET_RANGE,
+  ENEMY_BULLET_RADIUS,
+  ENEMY_BULLET_COLOR,
 } from './config.js';
 import { Character } from './character.js';
+
+// 敵人手槍的子彈數值 (enemy pistol bullet stats)
+const ENEMY_BULLET_STATS = {
+  speed: ENEMY_BULLET_SPEED,
+  damage: ENEMY_BULLET_DAMAGE,
+  range: ENEMY_BULLET_RANGE,
+  pierce: false,
+  explosionRadius: 0,
+  radius: ENEMY_BULLET_RADIUS,
+  color: ENEMY_BULLET_COLOR,
+};
 
 // 一般敵人：繼承 Character，加上自己的 AI (enemy with simple AI)
 export class Enemy extends Character {
@@ -80,13 +94,7 @@ export class Enemy extends Character {
       // 開槍：角度加上隨機偏移，敵人才不會百發百中 (shoot with random spread)
       if (this.shootCooldown === 0) {
         const spread = (Math.random() * 2 - 1) * ENEMY_BULLET_SPREAD;
-        this.shootBullet(
-          bullets,
-          this.aimAngle + spread,
-          ENEMY_BULLET_SPEED,
-          ENEMY_BULLET_DAMAGE,
-          'enemy'
-        );
+        this.shootBullet(bullets, this.aimAngle + spread, 'enemy', ENEMY_BULLET_STATS);
         this.shootCooldown = ENEMY_FIRE_INTERVAL;
       }
     } else if (this.lastSeenX !== null) {

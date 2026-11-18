@@ -3,15 +3,14 @@ import {
   PLAYER_SPEED,
   PLAYER_MAX_HP,
   PLAYER_COLOR,
-  PISTOL_FIRE_INTERVAL,
-  PISTOL_DAMAGE,
-  BULLET_SPEED,
+  WEAPONS,
   ADRENALINE_SPEED_BONUS,
   POWER_AMMO_DAMAGE_BONUS,
   SPEED_BUFF_RING_COLOR,
   DAMAGE_BUFF_RING_COLOR,
 } from './config.js';
 import { Character } from './character.js';
+import { Weapon } from './weapons.js';
 
 // 玩家角色：繼承 Character，只需要寫「玩家專屬」的部分 (player, extends Character)
 export class Player extends Character {
@@ -30,17 +29,113 @@ export class Player extends Character {
 
     // 永久效果：換彈速度倍率，1 = 正常，快手套每個 +0.15 (permanent reload speed multiplier)
     this.reloadSpeedMultiplier = 1;
+
+    // 武器欄：位置 i 對應 WEAPONS[i]，null 代表還沒取得 (weapon slots, null = not owned)
+    // 例如 weapons[1] 永遠是霰彈槍的位置，所以按 2 一定是霰彈槍。
+    this.weapons = [];
+    for (let i = 0; i < WEAPONS.length; i++) {
+      this.weapons.push(null);
+    }
+    this.weapons[0] = new Weapon(0);  // 開局只有手槍 (start with the pistol)
+    this.currentIndex = 0;            // 目前拿的是第幾把 (current weapon slot)
+
+    // 是否正在開火（按著扳機而且不在換彈），用來判斷輕機槍減速 (is firing, for LMG slow-down)
+    this.isFiring = false;
+  }
+
+  // ===== 武器管理 (weapon management) =====
+
+  /**
+   * 目前手上的武器 (current weapon)
+   * @returns {Weapon}
+   */
+  getWeapon() {
+    return this.weapons[this.currentIndex];
   }
 
   /**
-   * 覆寫父類別的 getSpeed：腎上腺素效果中速度提升 (override: faster with adrenaline)
+   * 取得一把新武器；已經有的話就補滿彈藥（第 8 步 BOSS 掉落時使用）(give a weapon)
+   * @param {number} index WEAPONS 中的位置
+   */
+  giveWeapon(index) {
+    if (this.weapons[index] === null) {
+      this.weapons[index] = new Weapon(index);
+    } else {
+      this.weapons[index].refillAll();
+    }
+    this.selectWeapon(index); // 撿到新槍直接換上 (equip it)
+  }
+
+  /**
+   * 切換到指定位置的武器；沒有那把槍就不動作 (switch to a slot)
+   * @param {number} index WEAPONS 中的位置
+   */
+  selectWeapon(index) {
+    if (index < 0 || index >= this.weapons.length) return;
+    if (this.weapons[index] === null) return;
+    if (index === this.currentIndex) return;
+
+    this.getWeapon().cancelReload(); // 換槍會中斷換彈 (switching cancels reload)
+    this.currentIndex = index;
+  }
+
+  /**
+   * 往前或往後切換到下一把「已取得」的武器，滑鼠滾輪用 (cycle through owned weapons)
+   * @param {number} direction +1 = 下一把，-1 = 上一把
+   */
+  cycleWeapon(direction) {
+    const count = this.weapons.length;
+    let index = this.currentIndex;
+
+    // 最多繞一圈，找到下一把有的槍 (loop at most once around)
+    for (let i = 0; i < count; i++) {
+      // 加 count 再取餘數，讓 -1 變成最後一格，形成循環 (wrap around)
+      index = (index + direction + count) % count;
+      if (this.weapons[index] !== null) {
+        this.selectWeapon(index);
+        return;
+      }
+    }
+  }
+
+  /**
+   * 是否有「備彈有限」的武器，沒有的話撿彈藥也沒用 (owns any weapon that uses ammo)
+   * @returns {boolean}
+   */
+  needsAmmo() {
+    for (const weapon of this.weapons) {
+      if (weapon !== null && !weapon.def.infiniteReserve) return true;
+    }
+    return false;
+  }
+
+  /**
+   * 撿到彈藥：每把有限備彈的槍都補「備彈上限 × 比例」(pick up ammo for every weapon)
+   * @param {number} ratio 補充比例，例如 0.3
+   */
+  addAmmoToAll(ratio) {
+    for (const weapon of this.weapons) {
+      if (weapon !== null) {
+        weapon.addReserveAmmo(Math.ceil(weapon.def.maxReserve * ratio));
+      }
+    }
+  }
+
+  // ===== 效果 (buffs) =====
+
+  /**
+   * 覆寫父類別的 getSpeed：腎上腺素變快、拿輕機槍開火時變慢 (override speed)
    * @returns {number}
    */
   getSpeed() {
+    let speed = this.speed;
     if (this.speedBuffTimer > 0) {
-      return this.speed * (1 + ADRENALINE_SPEED_BONUS);
+      speed *= 1 + ADRENALINE_SPEED_BONUS;
     }
-    return this.speed;
+    if (this.isFiring) {
+      speed *= this.getWeapon().def.firingMoveMultiplier;
+    }
+    return speed;
   }
 
   /**
@@ -54,8 +149,10 @@ export class Player extends Character {
     return 1;
   }
 
+  // ===== 每幀更新 (update) =====
+
   /**
-   * 每一幀更新：狀態、移動、瞄準、射擊 (update every frame)
+   * 每一幀更新：狀態、切換武器、換彈、移動、瞄準、射擊 (update every frame)
    * @param {number} dt 距離上一幀經過的秒數 (delta time in seconds)
    * @param {object} input 輸入狀態，來自 input.js (input state)
    * @param {Bullet[]} bullets 子彈陣列，開槍時把新子彈放進去 (bullet list)
@@ -68,19 +165,64 @@ export class Player extends Character {
     this.speedBuffTimer = Math.max(0, this.speedBuffTimer - dt);
     this.damageBuffTimer = Math.max(0, this.damageBuffTimer - dt);
 
-    // 移動：方向來自玩家的輸入 (movement from player input)
-    this.move(input.moveX, input.moveY, dt, map);
+    // ----- 切換武器 (switch weapon) -----
+    if (input.switchWeapon !== null) {
+      this.selectWeapon(input.switchWeapon);
+    }
+    if (input.switchWeaponStep !== 0) {
+      this.cycleWeapon(input.switchWeaponStep);
+    }
 
-    // 瞄準 (aim)
+    const weapon = this.getWeapon();
+    weapon.update(dt, input.isShooting);
+
+    // ----- 手動換彈 (manual reload) -----
+    if (input.reload) {
+      weapon.startReload(this.reloadSpeedMultiplier);
+    }
+
+    // 按著扳機、沒在換彈、彈匣有子彈，才算「正在開火」(actually firing)
+    this.isFiring = input.isShooting && !weapon.isReloading() && weapon.ammoInMag > 0;
+
+    // ----- 移動與瞄準 (move & aim) -----
+    this.move(input.moveX, input.moveY, dt, map);
     this.aimAngle = input.aimAngle;
 
-    // 射擊：傷害乘上倍率 (shooting, damage × multiplier)
-    if (input.isShooting && this.shootCooldown === 0) {
-      const damage = PISTOL_DAMAGE * this.getDamageMultiplier();
-      this.shootBullet(bullets, this.aimAngle, BULLET_SPEED, damage, 'player');
-      this.shootCooldown = PISTOL_FIRE_INTERVAL;
+    // ----- 射擊 (shooting) -----
+    if (input.isShooting && weapon.canFire()) {
+      this.fireWeapon(weapon, bullets);
+    }
+
+    // 彈匣空了，而且還按著扳機（或剛打完最後一發）就自動換彈 (auto reload when empty)
+    if (weapon.ammoInMag === 0) {
+      weapon.startReload(this.reloadSpeedMultiplier);
     }
   }
+
+  /**
+   * 用目前的武器開一槍：可能射出好幾顆彈丸 (fire the weapon, may shoot several pellets)
+   * @param {Weapon} weapon 武器
+   * @param {Bullet[]} bullets 子彈陣列
+   */
+  fireWeapon(weapon, bullets) {
+    const def = weapon.def;
+    const stats = {
+      speed: def.bulletSpeed,
+      damage: def.damage * this.getDamageMultiplier(),
+      range: def.range,
+      pierce: def.pierce,
+      explosionRadius: def.explosionRadius,
+      radius: def.bulletRadius,
+      color: def.bulletColor,
+    };
+
+    const angles = weapon.fire(this.aimAngle);
+    for (const angle of angles) {
+      this.shootBullet(bullets, angle, 'player', stats);
+    }
+  }
+
+  // ===== 繪製 (drawing) =====
 
   /**
    * 覆寫 draw：先照父類別畫好，再加上效果中的外圈 (override draw: add buff rings)

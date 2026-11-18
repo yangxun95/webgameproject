@@ -16,6 +16,14 @@ let mouseDown = false;
 // 有沒有「按了一下」確認鍵，等 updateInput 讀取後就清掉 (confirm pressed, waiting to be read)
 let confirmQueued = false;
 
+// 以下也是「按一下」型的輸入，讀取後清掉 (more one-shot inputs)
+let reloadQueued = false;         // 按了 R (reload)
+let switchQueued = null;          // 按了數字鍵，存武器位置 0~7；null = 沒按 (number key pressed)
+let wheelQueued = 0;              // 滾輪：+1 下一把，-1 上一把，0 = 沒滾 (mouse wheel)
+
+// 數字鍵 1~8 對應武器位置 0~7 (number keys → weapon slots)
+const WEAPON_KEYS = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8'];
+
 // 對外提供的輸入狀態 (input state for the game)
 export const input = {
   moveX: 0,         // 移動方向 x，範圍 -1 ~ 1
@@ -23,6 +31,9 @@ export const input = {
   aimAngle: 0,      // 瞄準角度，單位弧度，0 = 朝右 (aim angle in radians)
   isShooting: false, // 是否正在射擊 (is shooting)
   confirm: false,   // 這一幀是否「剛按下」確認（Enter 或點擊），只會是 true 一幀 (confirm, one frame only)
+  reload: false,    // 這一幀是否剛按下換彈 (reload pressed this frame)
+  switchWeapon: null, // 這一幀要切換到哪個武器位置，null = 不切換 (weapon slot to switch to)
+  switchWeaponStep: 0, // 滾輪切換：+1 / -1 / 0 (cycle direction)
 };
 
 /**
@@ -52,6 +63,17 @@ export function initInput(canvas) {
     // Enter = 確認。event.repeat 代表「按住不放自動重複」，不算新的一次 (ignore auto-repeat)
     if (event.code === 'Enter' && !event.repeat) {
       confirmQueued = true;
+    }
+
+    // R = 換彈 (reload)
+    if (event.code === 'KeyR' && !event.repeat) {
+      reloadQueued = true;
+    }
+
+    // 1~8 = 切換武器。indexOf 找不到會回傳 -1 (number keys; indexOf returns -1 if not found)
+    const slot = WEAPON_KEYS.indexOf(event.code);
+    if (slot !== -1) {
+      switchQueued = slot;
     }
   });
 
@@ -87,6 +109,14 @@ export function initInput(canvas) {
       mouseDown = false;
     }
   });
+
+  // 滑鼠滾輪：往下滾 deltaY > 0 = 下一把，往上滾 = 上一把 (wheel switches weapons)
+  // passive: false 才能用 preventDefault 阻止網頁跟著捲動 (needed to call preventDefault)
+  canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    if (event.deltaY > 0) wheelQueued = 1;
+    else if (event.deltaY < 0) wheelQueued = -1;
+  }, { passive: false });
 
   // 在 canvas 上按右鍵時不要跳出選單 (disable right-click menu)
   canvas.addEventListener('contextmenu', (event) => {
@@ -128,4 +158,14 @@ export function updateInput(player) {
   // ----- 確認：讀完就清掉，所以只會是 true 一幀 (confirm: read once, then reset) -----
   input.confirm = confirmQueued;
   confirmQueued = false;
+
+  // ----- 換彈與切換武器：一樣是讀完就清掉 (reload & switch: read once, then reset) -----
+  input.reload = reloadQueued;
+  reloadQueued = false;
+
+  input.switchWeapon = switchQueued;
+  switchQueued = null;
+
+  input.switchWeaponStep = wheelQueued;
+  wheelQueued = 0;
 }

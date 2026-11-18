@@ -69,6 +69,9 @@ export class GameMap {
     this.exitRow = 0;
     this.exitOpen = false;
 
+    // 剛被打破的箱子位置，game.js 每幀讀取後清空 (crates broken this frame, read by game.js)
+    this.brokenCrates = [];
+
     this.generate();
   }
 
@@ -298,20 +301,81 @@ export class GameMap {
   }
 
   /**
-   * 對某個像素位置的格子造成傷害；只有箱子會受傷，耐久度歸零就變成空地 (damage a crate)
+   * 某個像素位置是哪一種 tile；地圖外面回傳 'rock'（當作牆）(tile type at pixel)
    * @param {number} x 像素 x
    * @param {number} y 像素 y
-   * @param {number} damage 傷害量
+   * @returns {string}
    */
-  damageTileAtPixel(x, y, damage) {
+  getTileAtPixel(x, y) {
     const col = Math.floor(x / TILE_SIZE);
     const row = Math.floor(y / TILE_SIZE);
+    if (!this.isInside(col, row)) return 'rock';
+    return this.tiles[row][col];
+  }
+
+  /**
+   * 某個像素所在格子的代號，例如 "5,3"，用來記錄「打過哪些格子」(tile key, e.g. "5,3")
+   * @param {number} x 像素 x
+   * @param {number} y 像素 y
+   * @returns {string}
+   */
+  getTileKeyAtPixel(x, y) {
+    return `${Math.floor(x / TILE_SIZE)},${Math.floor(y / TILE_SIZE)}`;
+  }
+
+  /**
+   * 對某一格造成傷害；只有箱子會受傷，耐久度歸零就變成空地 (damage a crate)
+   * 箱子被打破時，把位置記到 brokenCrates，讓 game.js 決定要不要掉彈藥。
+   * @param {number} col 欄
+   * @param {number} row 列
+   * @param {number} damage 傷害量
+   */
+  damageTile(col, row, damage) {
     if (!this.isInside(col, row)) return;
     if (this.tiles[row][col] !== 'crate') return;
 
     this.crateHp[row][col] -= damage;
     if (this.crateHp[row][col] <= 0) {
       this.tiles[row][col] = 'empty'; // 箱子被打破 (crate destroyed)
+      this.brokenCrates.push({
+        x: col * TILE_SIZE + TILE_SIZE / 2,
+        y: row * TILE_SIZE + TILE_SIZE / 2,
+      });
+    }
+  }
+
+  /**
+   * 對某個像素位置的格子造成傷害 (damage the tile at a pixel)
+   * @param {number} x 像素 x
+   * @param {number} y 像素 y
+   * @param {number} damage 傷害量
+   */
+  damageTileAtPixel(x, y, damage) {
+    this.damageTile(Math.floor(x / TILE_SIZE), Math.floor(y / TILE_SIZE), damage);
+  }
+
+  /**
+   * 爆炸：對範圍內所有箱子造成傷害（格子中心在半徑內才算）(damage crates in a radius)
+   * @param {number} x 爆炸中心 x
+   * @param {number} y 爆炸中心 y
+   * @param {number} radius 爆炸半徑
+   * @param {number} damage 傷害量
+   */
+  damageTilesInRadius(x, y, radius, damage) {
+    // 只檢查爆炸範圍的外框方格，不用跑整張地圖 (only check the bounding box)
+    const startCol = Math.floor((x - radius) / TILE_SIZE);
+    const endCol = Math.floor((x + radius) / TILE_SIZE);
+    const startRow = Math.floor((y - radius) / TILE_SIZE);
+    const endRow = Math.floor((y + radius) / TILE_SIZE);
+
+    for (let row = startRow; row <= endRow; row++) {
+      for (let col = startCol; col <= endCol; col++) {
+        const centerX = col * TILE_SIZE + TILE_SIZE / 2;
+        const centerY = row * TILE_SIZE + TILE_SIZE / 2;
+        if (Math.hypot(centerX - x, centerY - y) <= radius) {
+          this.damageTile(col, row, damage);
+        }
+      }
     }
   }
 

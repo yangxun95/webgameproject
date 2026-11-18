@@ -83,6 +83,21 @@ export const POWER_AMMO_DAMAGE_BONUS = 0.5;    // 強化彈藥：傷害 +50% (da
 export const LIFE_ESSENCE_MAX_HP = 10;         // 生命精華：最大 HP +10 (max HP bonus)
 export const QUICK_GLOVES_RELOAD_BONUS = 0.15; // 快手套：換彈速度 +15%，第 7 步換彈系統才會用到 (reload speed bonus)
 
+// ===== 武器 HUD（左下角）(weapon HUD, bottom-left) =====
+export const HUD_MARGIN = 12;             // 離畫面邊緣幾 px (margin from screen edge)
+export const HUD_SLOT_SIZE = 22;          // 武器格子大小 (weapon slot size)
+export const HUD_SLOT_GAP = 4;            // 格子間距 (gap between slots)
+export const HUD_BAR_WIDTH = 76;          // 換彈 / 預熱進度條寬度 (progress bar width)
+export const HUD_BAR_HEIGHT = 6;
+export const HUD_BG_COLOR = 'rgba(0, 0, 0, 0.55)';
+export const HUD_TEXT_COLOR = '#ffffff';
+export const HUD_SUBTEXT_COLOR = '#b0bec5';
+export const HUD_SLOT_OWNED_COLOR = '#546e7a';      // 已取得的武器格 (owned slot)
+export const HUD_SLOT_EMPTY_COLOR = '#263238';      // 未取得的武器格 (locked slot)
+export const HUD_SLOT_SELECTED_COLOR = '#ffeb3b';   // 目前武器的外框 (selected slot border)
+export const HUD_RELOAD_COLOR = '#90caf9';
+export const HUD_SPIN_COLOR = '#ffab40';
+
 // ===== 受傷效果與血條 (hit effect & HP bar) =====
 export const HIT_FLASH_TIME = 0.1;        // 受傷閃白幾秒 (flash duration)
 export const HP_BAR_WIDTH = 28;
@@ -98,15 +113,95 @@ export const GUN_LENGTH = 20;             // 槍管長度，從圓心算起，�
 export const GUN_WIDTH = 6;               // 槍管粗細 (barrel width)
 export const GUN_COLOR = '#cfd8dc';
 
-// ===== 射擊（暫時的手槍設定，第 7 步會改成完整武器系統）(shooting, temporary pistol) =====
-export const PISTOL_FIRE_INTERVAL = 0.3;  // 兩發之間至少間隔幾秒 (seconds between shots)
-export const PISTOL_DAMAGE = 10;          // 每發傷害 (damage per bullet)
+// ===== 武器 (weapons) =====
+// 8 把槍的資料表，順序就是取得順序：手槍是第 1 把，第 N 個 BOSS 掉第 N+1 把 (weapon table, in unlock order)
+// 欄位說明 (fields):
+//   damage 每發傷害；fireInterval 開槍間隔秒數；magazineSize 彈匣容量；reloadTime 換彈秒數
+//   bulletSpeed 子彈速度 px/秒；range 射程 px；spread 散布角度（弧度）；pellets 一次射出幾顆
+//   startReserve 取得時的備彈；maxReserve 備彈上限；infiniteReserve 備彈是否無限
+//   pierce 是否貫穿敵人與箱子；explosionRadius 爆炸半徑 px（0 = 不爆炸）
+//   firingMoveMultiplier 開火時的移動速度倍率（1 = 不減速）；spinUpTime 開火前要空轉幾秒（0 = 不用）
+//   bulletRadius、bulletColor 子彈外觀
+export const WEAPONS = [
+  {
+    id: 'pistol', name: '手槍', nameEn: 'Pistol',
+    damage: 10, fireInterval: 0.3, magazineSize: 12, reloadTime: 1.0,
+    bulletSpeed: 500, range: 700, spread: 0.02, pellets: 1,
+    startReserve: 0, maxReserve: 0, infiniteReserve: true,
+    pierce: false, explosionRadius: 0, firingMoveMultiplier: 1, spinUpTime: 0,
+    bulletRadius: 3, bulletColor: '#ffeb3b',
+  },
+  {
+    id: 'shotgun', name: '霰彈槍', nameEn: 'Shotgun',
+    damage: 8, fireInterval: 0.8, magazineSize: 6, reloadTime: 1.6,
+    bulletSpeed: 450, range: 260, spread: 0.35, pellets: 6,
+    startReserve: 18, maxReserve: 36, infiniteReserve: false,
+    pierce: false, explosionRadius: 0, firingMoveMultiplier: 1, spinUpTime: 0,
+    bulletRadius: 3, bulletColor: '#ffe082',
+  },
+  {
+    id: 'smg', name: '衝鋒槍', nameEn: 'SMG',
+    damage: 6, fireInterval: 0.08, magazineSize: 30, reloadTime: 1.4,
+    bulletSpeed: 520, range: 550, spread: 0.15, pellets: 1,
+    startReserve: 90, maxReserve: 180, infiniteReserve: false,
+    pierce: false, explosionRadius: 0, firingMoveMultiplier: 1, spinUpTime: 0,
+    bulletRadius: 2, bulletColor: '#fff59d',
+  },
+  {
+    id: 'rifle', name: '突擊步槍', nameEn: 'Assault Rifle',
+    damage: 12, fireInterval: 0.12, magazineSize: 30, reloadTime: 1.6,
+    bulletSpeed: 600, range: 750, spread: 0.05, pellets: 1,
+    startReserve: 90, maxReserve: 180, infiniteReserve: false,
+    pierce: false, explosionRadius: 0, firingMoveMultiplier: 1, spinUpTime: 0,
+    bulletRadius: 3, bulletColor: '#ffd54f',
+  },
+  {
+    id: 'sniper', name: '狙擊槍', nameEn: 'Sniper Rifle',
+    damage: 60, fireInterval: 1.2, magazineSize: 5, reloadTime: 2.2,
+    bulletSpeed: 1100, range: 1000, spread: 0, pellets: 1,
+    startReserve: 15, maxReserve: 30, infiniteReserve: false,
+    pierce: true, explosionRadius: 0, firingMoveMultiplier: 1, spinUpTime: 0,
+    bulletRadius: 3, bulletColor: '#ffffff',
+  },
+  {
+    id: 'grenade', name: '榴彈槍', nameEn: 'Grenade Launcher',
+    damage: 40, fireInterval: 0.9, magazineSize: 4, reloadTime: 2.0,
+    bulletSpeed: 350, range: 400, spread: 0.02, pellets: 1,
+    startReserve: 12, maxReserve: 24, infiniteReserve: false,
+    pierce: false, explosionRadius: 70, firingMoveMultiplier: 1, spinUpTime: 0,
+    bulletRadius: 5, bulletColor: '#9ccc65',
+  },
+  {
+    id: 'lmg', name: '輕機槍', nameEn: 'LMG',
+    damage: 14, fireInterval: 0.1, magazineSize: 100, reloadTime: 3.5,
+    bulletSpeed: 600, range: 750, spread: 0.08, pellets: 1,
+    startReserve: 200, maxReserve: 400, infiniteReserve: false,
+    pierce: false, explosionRadius: 0, firingMoveMultiplier: 0.5, spinUpTime: 0,
+    bulletRadius: 3, bulletColor: '#ffca28',
+  },
+  {
+    id: 'gatling', name: '加特林', nameEn: 'Gatling',
+    damage: 10, fireInterval: 0.04, magazineSize: 200, reloadTime: 4.0,
+    bulletSpeed: 650, range: 700, spread: 0.12, pellets: 1,
+    startReserve: 400, maxReserve: 800, infiniteReserve: false,
+    pierce: false, explosionRadius: 0, firingMoveMultiplier: 1, spinUpTime: 1.0,
+    bulletRadius: 2, bulletColor: '#ffab40',
+  },
+];
 
-// ===== 子彈 (bullet) =====
-export const BULLET_SPEED = 500;          // 玩家子彈速度，單位 px/秒 (pixels per second)
-export const BULLET_RADIUS = 3;
-export const BULLET_COLOR = '#ffeb3b';
-export const ENEMY_BULLET_COLOR = '#ff7043';
+// ===== 子彈與爆炸 (bullets & explosions) =====
+// 子彈每次最多前進幾 px 就檢查一次碰撞，避免高速子彈「穿過」牆或敵人 (sub-step size, prevents tunneling)
+export const BULLET_STEP_SIZE = 8;
+export const EXPLOSION_DURATION = 0.3;    // 爆炸畫面持續幾秒 (explosion visual duration)
+export const EXPLOSION_COLOR = 'rgba(255, 152, 0, 0.6)';
+
+// ===== 彈藥掉落 (ammo drops) =====
+export const ENEMY_AMMO_DROP_CHANCE = 0.4;  // 敵人死亡時掉彈藥的機率 (chance per enemy)
+export const CRATE_AMMO_DROP_CHANCE = 0.3;  // 箱子被打破時掉彈藥的機率 (chance per crate)
+export const AMMO_PICKUP_RATIO = 0.3;       // 撿到彈藥時，每把槍補「備彈上限 × 30%」(refill ratio)
+export const AMMO_PICKUP_RADIUS = 9;
+export const AMMO_PICKUP_COLOR = '#a1887f';
+export const AMMO_PICKUP_TEXT_COLOR = '#ffffff';
 
 // ===== 敵人 (enemy) =====
 export const ENEMY_COUNT = 2;             // 每關敵人數量，第 8 步會改成隨關卡增加 (enemies per stage)
@@ -121,5 +216,8 @@ export const ENEMY_FIRE_INTERVAL = 0.9;   // 開槍間隔秒數 (seconds between
 export const ENEMY_REACTION_TIME = 0.5;   // 剛看到玩家時，等幾秒才開第一槍 (delay before first shot)
 export const ENEMY_BULLET_SPEED = 300;    // 比玩家子彈慢，玩家才躲得掉 (dodgeable)
 export const ENEMY_BULLET_DAMAGE = 8;
+export const ENEMY_BULLET_RANGE = 600;    // 敵人子彈射程 (range)
+export const ENEMY_BULLET_RADIUS = 3;
+export const ENEMY_BULLET_COLOR = '#ff7043';
 export const ENEMY_BULLET_SPREAD = 0.15;  // 子彈隨機偏移的最大角度，單位弧度，約 ±8.6° (max spread)
 export const ENEMY_MIN_SPAWN_DISTANCE = 10; // 敵人至少離玩家出生點幾格 (min tiles from player spawn)
