@@ -11,13 +11,15 @@ import {
   ENEMY_AMMO_DROP_CHANCE,
   CRATE_AMMO_DROP_CHANCE,
   AMMO_PICKUP_RATIO,
+  CRATE_POTION_DROP_CHANCE,
+  POTION_HEAL,
 } from './config.js';
 import { input, updateInput, isTouchMode, getTouchControls } from './input.js';
 import { GameMap } from './map.js';
 import { Player } from './player.js';
 import { Enemy, Boss, createEnemyStats, createBossStats } from './enemy.js';
 import { Explosion } from './bullet.js';
-import { createRandomItem, applyItem, AmmoPickup, BossReward } from './items.js';
+import { createRandomItem, applyItem, AmmoPickup, HealthPotion, BossReward } from './items.js';
 import {
   drawWeaponHud,
   drawStatusHud,
@@ -159,6 +161,7 @@ export class Game {
     this.bullets = [];
     this.explosions = [];     // 畫面上的爆炸特效 (explosion visuals)
     this.ammoPickups = [];    // 地上的彈藥 (ammo on the ground)
+    this.potions = [];        // 地上的回血藥 (health potions on the ground)
 
     // 這一關的道具：null 代表地上沒有道具 (item on the ground, null = none)
     this.item = null;
@@ -303,9 +306,13 @@ export class Game {
       }
     }
 
-    // 被打破的箱子也有機率掉彈藥，讀完就清空清單 (broken crates may drop ammo)
+    // 被打破的箱子：先抽回血藥，沒抽中才抽彈藥，讀完就清空清單 (broken crates: potion first, else maybe ammo)
     for (const crate of this.map.brokenCrates) {
-      this.tryDropAmmo(crate.x, crate.y, CRATE_AMMO_DROP_CHANCE);
+      if (Math.random() < CRATE_POTION_DROP_CHANCE) {
+        this.potions.push(new HealthPotion(crate.x, crate.y));
+      } else {
+        this.tryDropAmmo(crate.x, crate.y, CRATE_AMMO_DROP_CHANCE);
+      }
     }
     this.map.brokenCrates = [];
 
@@ -317,11 +324,21 @@ export class Game {
       }
     }
 
-    // 清除死掉的子彈、敵人、結束的爆炸、撿走的彈藥 (remove finished objects)
+    // 撿回血藥：血沒滿才撿，滿血時留在地上之後再回來撿 (pick up potion only when hurt)
+    for (const potion of this.potions) {
+      if (circlesOverlap(this.player, potion) && this.player.hp < this.player.maxHp) {
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + POTION_HEAL);
+        potion.pickedUp = true;
+        this.showMessage(`回血藥：回復 ${POTION_HEAL} HP`);
+      }
+    }
+
+    // 清除死掉的子彈、敵人、結束的爆炸、撿走的彈藥和回血藥 (remove finished objects)
     this.bullets = this.bullets.filter((bullet) => bullet.alive);
     this.enemies = this.enemies.filter((enemy) => !enemy.isDead());
     this.explosions = this.explosions.filter((explosion) => !explosion.isDone());
     this.ammoPickups = this.ammoPickups.filter((ammo) => !ammo.pickedUp);
+    this.potions = this.potions.filter((potion) => !potion.pickedUp);
 
     // ----- 玩家死亡 (player died) -----
     if (this.player.isDead()) {
@@ -501,6 +518,9 @@ export class Game {
 
     for (const ammo of this.ammoPickups) {
       ammo.draw(ctx);
+    }
+    for (const potion of this.potions) {
+      potion.draw(ctx);
     }
     if (this.item !== null) {
       this.item.draw(ctx);

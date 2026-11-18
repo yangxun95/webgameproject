@@ -25,6 +25,9 @@ import {
   REWARD_BORDER_COLOR,
   REWARD_TEXT_COLOR,
   BOSS_SUPPLY_AMMO_RATIO,
+  POTION_RADIUS,
+  POTION_COLOR,
+  POTION_TEXT_COLOR,
 } from './config.js';
 import { getImage } from './assets.js';
 
@@ -174,6 +177,48 @@ export class AmmoPickup {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('彈', this.x, this.y + 1);
+  }
+}
+
+// 地上的回血藥：箱子掉落，撿到會回血；血是滿的就不會撿起來 (health potion pickup)
+export class HealthPotion {
+  /**
+   * 建立回血藥 (create health potion)
+   * @param {number} x 位置 x
+   * @param {number} y 位置 y
+   */
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = POTION_RADIUS;
+    this.pickedUp = false;  // 被撿走後設成 true，等著被移除 (marked for removal)
+  }
+
+  /**
+   * 畫成紅色小圓，上面寫「血」(draw as a small red circle)
+   * @param {CanvasRenderingContext2D} ctx 畫筆
+   */
+  draw(ctx) {
+    const image = getImage('potion');
+    if (image !== null) {
+      drawImageCentered(ctx, image, this.x, this.y, this.radius * 2);
+      return;
+    }
+
+    ctx.fillStyle = POTION_COLOR;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = POTION_TEXT_COLOR;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = POTION_TEXT_COLOR;
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('血', this.x, this.y + 1);
   }
 }
 

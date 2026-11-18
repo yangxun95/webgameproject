@@ -255,6 +255,14 @@ export const AMMO_PICKUP_RADIUS = 9;
 export const AMMO_PICKUP_COLOR = '#a1887f';
 export const AMMO_PICKUP_TEXT_COLOR = '#ffffff';
 
+// ===== 回血藥 (health potion) =====
+// 箱子被打破時有機率掉回血藥；掉了回血藥就不再掉彈藥，免得兩個疊在一起 (potion OR ammo, not both)
+export const CRATE_POTION_DROP_CHANCE = 0.18; // 箱子掉回血藥的機率 18% (chance per crate)
+export const POTION_HEAL = 20;                 // 回血藥回復量，比醫療包的 30 少 (heal amount)
+export const POTION_RADIUS = 8;
+export const POTION_COLOR = '#e53935';
+export const POTION_TEXT_COLOR = '#ffffff';
+
 // ===== 敵人 (enemy) =====
 // 以下是「第 1 關」的基礎數值，之後的關卡依「敵人強度成長」放大 (stage-1 base values)
 export const ENEMY_BASE_COUNT = 2;        // 第 1 關的敵人數量 (enemies in stage 1)
