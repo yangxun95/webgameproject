@@ -19,13 +19,13 @@ import { loadImages, getImage, PIXEL_ART } from './assets.js';
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-// canvas 內部解析度固定為邏輯尺寸 800×608 (fixed logical resolution)
+// canvas 內部解析度固定為邏輯尺寸 896×416 (fixed logical resolution)
 canvas.width = GAME_WIDTH;
 canvas.height = GAME_HEIGHT;
 
 /**
  * 依視窗大小等比例縮放 canvas，多出來的地方是黑邊 (letterbox scaling)
- * 只改「顯示大小」，遊戲邏輯永遠用 800×608 計算。
+ * 只改「顯示大小」，遊戲邏輯永遠用 896×416 計算。
  */
 function resizeCanvas() {
   const scale = Math.min(

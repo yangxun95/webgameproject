@@ -185,6 +185,8 @@ export function drawCenterMessage(ctx, text) {
  */
 export function drawMenu(ctx, bestStage, time, touchMode) {
   const cx = GAME_WIDTH / 2;
+  // 文字位置都以畫面中心 cy 為基準，改畫面高度也不會跑出畫面 (positions relative to the center)
+  const cy = GAME_HEIGHT / 2;
 
   ctx.fillStyle = MENU_OVERLAY_COLOR;
   ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -192,35 +194,35 @@ export function drawMenu(ctx, bestStage, time, touchMode) {
   // 標題 (title)
   ctx.fillStyle = MENU_TITLE_COLOR;
   setText(ctx, 'bold 56px sans-serif', 'center', 'middle');
-  ctx.fillText(GAME_TITLE, cx, 150);
+  ctx.fillText(GAME_TITLE, cx, cy - 130);
 
   ctx.fillStyle = MENU_SUBTEXT_COLOR;
   setText(ctx, '16px sans-serif', 'center', 'middle');
-  ctx.fillText(GAME_SUBTITLE, cx, 200);
+  ctx.fillText(GAME_SUBTITLE, cx, cy - 85);
 
   // 最高紀錄：0 代表還沒玩過 (best record; 0 = never played)
   ctx.fillStyle = MENU_TEXT_COLOR;
   setText(ctx, 'bold 22px sans-serif', 'center', 'middle');
-  ctx.fillText(bestStage > 0 ? `最高紀錄：第 ${bestStage} 關` : '還沒有紀錄', cx, 270);
+  ctx.fillText(bestStage > 0 ? `最高紀錄：第 ${bestStage} 關` : '還沒有紀錄', cx, cy - 35);
 
   // 操作說明 (controls)
   ctx.fillStyle = MENU_SUBTEXT_COLOR;
   setText(ctx, '15px sans-serif', 'center', 'middle');
   if (touchMode) {
-    ctx.fillText('左半邊：搖桿移動　　右半邊：搖桿瞄準並自動射擊', cx, 340);
-    ctx.fillText('右下按鈕：換彈、換槍　　也可以點左下角的武器欄', cx, 368);
+    ctx.fillText('左半邊：搖桿移動　　右半邊：搖桿瞄準並自動射擊', cx, cy + 25);
+    ctx.fillText('右下按鈕：換彈、換槍　　也可以點左下角的武器欄', cx, cy + 51);
   } else {
-    ctx.fillText('WASD 移動　　滑鼠瞄準　　按住左鍵射擊', cx, 340);
-    ctx.fillText('R 換彈　　1~8 或滾輪 切換武器', cx, 368);
+    ctx.fillText('WASD 移動　　滑鼠瞄準　　按住左鍵射擊', cx, cy + 25);
+    ctx.fillText('R 換彈　　1~8 或滾輪 切換武器', cx, cy + 51);
   }
-  ctx.fillText('打倒所有敵人 → 撿起道具 → 走進出口　每 5 關有 BOSS', cx, 396);
+  ctx.fillText('打倒所有敵人 → 撿起道具 → 走進出口　每 5 關有 BOSS', cx, cy + 77);
 
   // 開始提示：前半個週期顯示、後半個週期隱藏，形成閃爍 (blink: visible for half of each period)
   // % 取餘數：time % 1.0 會在 0 ~ 1 之間不斷循環 (remainder loops from 0 to the period)
   if (time % MENU_BLINK_PERIOD < MENU_BLINK_PERIOD / 2) {
     ctx.fillStyle = MENU_TEXT_COLOR;
     setText(ctx, 'bold 24px sans-serif', 'center', 'middle');
-    ctx.fillText(touchMode ? '點擊畫面開始' : '按 Enter 或點擊畫面開始', cx, 480);
+    ctx.fillText(touchMode ? '點擊畫面開始' : '按 Enter 或點擊畫面開始', cx, cy + 145);
   }
 }
 
