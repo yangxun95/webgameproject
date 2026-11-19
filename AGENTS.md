@@ -65,6 +65,7 @@ js/weapons.js       # 武器定義、射擊、換彈、切換
 js/bullet.js        # 子彈與爆炸
 js/items.js         # 輔助道具與彈藥掉落
 js/ui.js            # HUD（血量、護甲、彈藥、關卡數）與選單畫面
+js/effects.js       # 打擊感特效：傷害數字、碎片粒子（畫面震動在 game.js）
 ```
 
 ## 核心架構原則

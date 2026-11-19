@@ -251,6 +251,26 @@ export const WEAPONS = [
 // ===== 子彈與爆炸 (bullets & explosions) =====
 // 子彈每次最多前進幾 px 就檢查一次碰撞，避免高速子彈「穿過」牆或敵人 (sub-step size, prevents tunneling)
 export const BULLET_STEP_SIZE = 8;
+// ===== 打擊感 (game feel) =====
+export const SCREEN_SHAKE_DURATION = 0.2;    // 畫面震動幾秒 (shake duration)
+export const SCREEN_SHAKE_STRENGTH = 5;      // 最多偏移幾 px (max shake offset)
+export const KNOCKBACK_DISTANCE = 6;         // 敵人中彈被推開幾 px，BOSS 不會被推 (knockback; bosses are immune)
+// 被推開後隔多久才能再被推；不然加特林一秒 25 發會把敵人一路推走 (knockback cooldown, stops fast guns pinning enemies)
+export const KNOCKBACK_COOLDOWN = 0.15;
+export const DAMAGE_TEXT_DURATION = 0.6;     // 傷害數字顯示幾秒 (damage number lifetime)
+export const DAMAGE_TEXT_RISE_SPEED = 40;    // 每秒往上飄幾 px (rise speed)
+export const DAMAGE_TEXT_SPREAD = 14;        // 數字位置隨機偏移幾 px，霰彈同時打中好幾顆時才不會疊在一起 (random offset)
+export const DAMAGE_TEXT_OFFSET_Y = 14;      // 數字出現在頭頂再往上幾 px，避開血條 (start above the HP bar)
+export const DAMAGE_TEXT_COLOR = '#ffeb3b';         // 打中敵人的數字 (damage dealt)
+export const PLAYER_DAMAGE_TEXT_COLOR = '#ff5252';  // 玩家受傷的數字 (damage taken)
+export const DAMAGE_TEXT_OUTLINE_COLOR = '#212121';
+export const PARTICLE_DURATION = 0.45;       // 碎片存在幾秒 (particle lifetime)
+export const PARTICLE_SPEED = 160;           // 碎片噴出的速度 px/秒 (particle speed)
+export const PARTICLE_RADIUS = 3;
+export const PARTICLE_FRICTION = 0.05;       // 每秒速度剩下 5%，噴出去後很快停下 (velocity kept per second)
+export const DEATH_PARTICLE_COUNT = 14;      // 敵人死掉噴幾顆 (particles on enemy death)
+export const CRATE_PARTICLE_COUNT = 8;       // 箱子破掉噴幾顆 (particles on crate break)
+
 export const EXPLOSION_DURATION = 0.3;    // 爆炸畫面持續幾秒 (explosion visual duration)
 export const EXPLOSION_COLOR = 'rgba(255, 152, 0, 0.6)';
 

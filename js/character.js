@@ -47,6 +47,7 @@ export class Character {
     this.aimAngle = 0;        // 瞄準角度 (aim angle)
     this.shootCooldown = 0;   // 還要等幾秒才能開槍 (seconds until next shot)
     this.hitFlashTimer = 0;   // 受傷閃白還剩幾秒 (hit flash time left)
+    this.knockbackCooldown = 0; // 還要等幾秒才能再被推開 (time until the next knockback)
     this.trapCooldown = 0;    // 陷阱還要等幾秒才會再扣血 (trap cooldown)
   }
 
@@ -82,6 +83,7 @@ export class Character {
     this.hitFlashTimer = Math.max(0, this.hitFlashTimer - dt);
     this.shootCooldown = Math.max(0, this.shootCooldown - dt);
     this.trapCooldown = Math.max(0, this.trapCooldown - dt);
+    this.knockbackCooldown = Math.max(0, this.knockbackCooldown - dt);
 
     // 站在陷阱上，而且冷卻結束，就扣血 (trap damage with cooldown)
     if (map.isTrapAtPixel(this.x, this.y) && this.trapCooldown === 0) {

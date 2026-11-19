@@ -74,7 +74,15 @@ function drawGrid() {
  * 畫出整個畫面 (render one frame)
  */
 function draw() {
+  // 畫面震動時，地板也要跟著遊戲世界一起偏移 (the floor shakes together with the world)
+  // 先塗黑底，偏移後露出的邊緣才不會留下上一幀的殘影 (black first so edges don't show the last frame)
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  ctx.save();
+  ctx.translate(game.shakeX, game.shakeY);
   drawFloor();
+  ctx.restore();
+
   game.draw(ctx);
 }
 
