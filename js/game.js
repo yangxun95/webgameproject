@@ -8,6 +8,9 @@ import {
   GAME_OVER_INPUT_DELAY,
   STORAGE_KEY_BEST_STAGE,
   BULLET_STEP_SIZE,
+  STAGE_HEAL,
+  AIM_ASSIST_ANGLE,
+  AIM_ASSIST_RANGE,
   ENEMY_AMMO_DROP_CHANCE,
   CRATE_AMMO_DROP_CHANCE,
   AMMO_PICKUP_RATIO,
@@ -151,9 +154,10 @@ export class Game {
       // 新的一局：建立新玩家 (new run: create a new player)
       this.player = new Player(spawn.x, spawn.y);
     } else {
-      // 下一關：同一個玩家搬到新出生點，血量不變 (next stage: keep the same player)
+      // 下一關：同一個玩家搬到新出生點，回一點血 (next stage: keep the player, heal a bit)
       this.player.x = spawn.x;
       this.player.y = spawn.y;
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + STAGE_HEAL);
     }
 
     this.spawnEnemies();
@@ -280,6 +284,10 @@ export class Game {
    * @param {number} dt 經過秒數
    */
   updatePlaying(dt) {
+    // 手機射擊時才做瞄準輔助；電腦用滑鼠，本來就瞄得準 (aim assist only for touch)
+    if (isTouchMode() && input.isShooting) {
+      this.applyAimAssist();
+    }
     this.player.update(dt, input, this.bullets, this.map);
 
     for (const enemy of this.enemies) {
@@ -491,6 +499,37 @@ export class Game {
     }
     this.map.damageTilesInRadius(x, y, radius, damage);
     this.explosions.push(new Explosion(x, y, radius));
+  }
+
+  /**
+   * 瞄準輔助：在玩家推的方向附近找一個看得到的敵人，把瞄準角度改成對準他 (aim assist)
+   * 條件：距離在 AIM_ASSIST_RANGE 內、角度差在 AIM_ASSIST_ANGLE 內、中間沒被擋住。
+   * 有好幾個符合時，選角度差最小的，也就是最接近玩家想瞄的那個。
+   */
+  applyAimAssist() {
+    let bestEnemy = null;
+    let bestDiff = AIM_ASSIST_ANGLE;
+
+    for (const enemy of this.enemies) {
+      const dx = enemy.x - this.player.x;
+      const dy = enemy.y - this.player.y;
+      if (Math.hypot(dx, dy) > AIM_ASSIST_RANGE) continue;
+
+      // 兩個角度相減後再用 atan2(sin, cos) 轉回 -π ~ π，才不會出現 350° 這種繞遠路的差 (wrap angle difference)
+      const enemyAngle = Math.atan2(dy, dx);
+      const raw = enemyAngle - input.aimAngle;
+      const diff = Math.abs(Math.atan2(Math.sin(raw), Math.cos(raw)));
+      if (diff > bestDiff) continue;
+
+      if (!this.map.hasLineOfSight(this.player.x, this.player.y, enemy.x, enemy.y)) continue;
+
+      bestEnemy = enemy;
+      bestDiff = diff;
+    }
+
+    if (bestEnemy !== null) {
+      input.aimAngle = Math.atan2(bestEnemy.y - this.player.y, bestEnemy.x - this.player.x);
+    }
   }
 
   /**
