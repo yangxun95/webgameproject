@@ -8,6 +8,20 @@ import {
   GAME_OVER_INPUT_DELAY,
   STORAGE_KEY_BEST_STAGE,
   BULLET_STEP_SIZE,
+  STAGE_HEAL,
+  AIM_ASSIST_ANGLE,
+  AIM_ASSIST_RANGE,
+  SCREEN_SHAKE_DURATION,
+  SCREEN_SHAKE_STRENGTH,
+  KNOCKBACK_DISTANCE,
+  KNOCKBACK_COOLDOWN,
+  DAMAGE_TEXT_SPREAD,
+  DAMAGE_TEXT_OFFSET_Y,
+  DAMAGE_TEXT_COLOR,
+  PLAYER_DAMAGE_TEXT_COLOR,
+  DEATH_PARTICLE_COUNT,
+  CRATE_PARTICLE_COUNT,
+  CRATE_COLOR,
   ENEMY_AMMO_DROP_CHANCE,
   CRATE_AMMO_DROP_CHANCE,
   AMMO_PICKUP_RATIO,
@@ -19,6 +33,7 @@ import { GameMap } from './map.js';
 import { Player } from './player.js';
 import { Enemy, Boss, createEnemyStats, createBossStats } from './enemy.js';
 import { Explosion } from './bullet.js';
+import { FloatingText, createBurst } from './effects.js';
 import { createRandomItem, applyItem, AmmoPickup, HealthPotion, BossReward } from './items.js';
 import {
   drawWeaponHud,
@@ -83,6 +98,10 @@ function circlesOverlap(a, b) {
 export class Game {
   constructor() {
     this.bestStage = loadBestStage();
+    // 畫面震動：剩下幾秒，以及這一幀的偏移量 (screen shake: time left and this frame's offset)
+    this.shakeTimer = 0;
+    this.shakeX = 0;
+    this.shakeY = 0;
     this.goToMenu();
   }
 
@@ -151,15 +170,17 @@ export class Game {
       // 新的一局：建立新玩家 (new run: create a new player)
       this.player = new Player(spawn.x, spawn.y);
     } else {
-      // 下一關：同一個玩家搬到新出生點，血量不變 (next stage: keep the same player)
+      // 下一關：同一個玩家搬到新出生點，回一點血 (next stage: keep the player, heal a bit)
       this.player.x = spawn.x;
       this.player.y = spawn.y;
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + STAGE_HEAL);
     }
 
     this.spawnEnemies();
 
     this.bullets = [];
     this.explosions = [];     // 畫面上的爆炸特效 (explosion visuals)
+    this.effects = [];        // 傷害數字、碎片等打擊感特效 (damage numbers, particles)
     this.ammoPickups = [];    // 地上的彈藥 (ammo on the ground)
     this.potions = [];        // 地上的回血藥 (health potions on the ground)
 
@@ -254,6 +275,8 @@ export class Game {
   update(dt) {
     updateInput(this.player);
     this.messageTimer = Math.max(0, this.messageTimer - dt);
+    this.updateShake(dt);
+    this.updateEffects(dt);
 
     if (this.state === 'menu') {
       this.updateMenu(dt);
@@ -280,6 +303,13 @@ export class Game {
    * @param {number} dt 經過秒數
    */
   updatePlaying(dt) {
+    // 先記下血量 + 護甲，更新完再比較，就知道這一幀有沒有受傷（子彈、陷阱都算）(detect damage taken this frame)
+    const healthBefore = this.player.hp + this.player.armor;
+
+    // 手機射擊時才做瞄準輔助；電腦用滑鼠，本來就瞄得準 (aim assist only for touch)
+    if (isTouchMode() && input.isShooting) {
+      this.applyAimAssist();
+    }
     this.player.update(dt, input, this.bullets, this.map);
 
     for (const enemy of this.enemies) {
@@ -292,12 +322,21 @@ export class Game {
       explosion.update(dt);
     }
 
+    // 玩家受傷：畫面震動 + 紅色數字 (player got hurt: shake + red number)
+    const healthLost = healthBefore - (this.player.hp + this.player.armor);
+    if (healthLost > 0) {
+      this.startShake();
+      this.addDamageText(this.player, healthLost, PLAYER_DAMAGE_TEXT_COLOR);
+    }
+
     // 移除前先記下死掉敵人的位置，道具要掉在這裡；也有機率掉彈藥 (enemy deaths: remember position, maybe drop ammo)
     for (const enemy of this.enemies) {
       if (enemy.isDead()) {
         this.lastEnemyDeathX = enemy.x;
         this.lastEnemyDeathY = enemy.y;
         this.tryDropAmmo(enemy.x, enemy.y, ENEMY_AMMO_DROP_CHANCE);
+        // 噴出跟敵人同顏色的碎片 (burst of particles in the enemy's color)
+        this.effects.push(...createBurst(enemy.x, enemy.y, enemy.color, DEATH_PARTICLE_COUNT));
 
         // instanceof：檢查這個物件是不是 Boss 這個 class 建立的 (is this enemy a Boss?)
         if (enemy instanceof Boss) {
@@ -308,6 +347,7 @@ export class Game {
 
     // 被打破的箱子：先抽回血藥，沒抽中才抽彈藥，讀完就清空清單 (broken crates: potion first, else maybe ammo)
     for (const crate of this.map.brokenCrates) {
+      this.effects.push(...createBurst(crate.x, crate.y, CRATE_COLOR, CRATE_PARTICLE_COUNT));
       if (Math.random() < CRATE_POTION_DROP_CHANCE) {
         this.potions.push(new HealthPotion(crate.x, crate.y));
       } else {
@@ -463,7 +503,8 @@ export class Game {
         return;
       }
 
-      enemy.takeDamage(bullet.damage);
+      // 被打退的方向 = 子彈飛行的方向 (knock back along the bullet's direction)
+      this.hitEnemy(enemy, bullet.damage, Math.atan2(bullet.vy, bullet.vx));
 
       if (bullet.pierce) {
         bullet.hitEnemies.add(enemy); // 記下來，繼續往前飛 (remember, keep flying)
@@ -486,11 +527,110 @@ export class Game {
     for (const enemy of this.enemies) {
       // 敵人身體任何一部分在爆炸範圍內就算：距離 < 爆炸半徑 + 敵人半徑 (any part inside the blast)
       if (Math.hypot(enemy.x - x, enemy.y - y) < radius + enemy.radius) {
-        enemy.takeDamage(damage);
+        // 從爆炸中心往外推 (knock away from the blast center)
+        this.hitEnemy(enemy, damage, Math.atan2(enemy.y - y, enemy.x - x));
       }
     }
     this.map.damageTilesInRadius(x, y, radius, damage);
     this.explosions.push(new Explosion(x, y, radius));
+    this.startShake();
+  }
+
+  // ===== 打擊感 (game feel) =====
+
+  /**
+   * 敵人中彈：扣血、跳出傷害數字、往後退一點 (enemy got hit: damage, number, knockback)
+   * @param {Enemy} enemy 被打中的敵人
+   * @param {number} damage 傷害
+   * @param {number} angle 被推開的方向，弧度 (knockback direction in radians)
+   */
+  hitEnemy(enemy, damage, angle) {
+    enemy.takeDamage(damage);
+    this.addDamageText(enemy, damage, DAMAGE_TEXT_COLOR);
+
+    // BOSS 很重，不會被推開；剛被推過的也先不推 (bosses are too heavy; respect the cooldown)
+    if (enemy instanceof Boss) return;
+    if (enemy.knockbackCooldown > 0) return;
+    enemy.knockbackCooldown = KNOCKBACK_COOLDOWN;
+    // 用角色本來的 moveX / moveY，推進牆裡也會被擋住 (reuse wall collision)
+    enemy.moveX(Math.cos(angle) * KNOCKBACK_DISTANCE, this.map);
+    enemy.moveY(Math.sin(angle) * KNOCKBACK_DISTANCE, this.map);
+  }
+
+  /**
+   * 在角色頭上加一個飄起來的傷害數字 (add a floating damage number above a character)
+   * @param {Character} character 角色
+   * @param {number} amount 傷害量
+   * @param {string} color 顏色
+   */
+  addDamageText(character, amount, color) {
+    // 隨機偏一點（左右偏多、上下偏少），霰彈一次打中好幾顆時數字才不會疊在一起 (random offset)
+    const offsetX = (Math.random() * 2 - 1) * DAMAGE_TEXT_SPREAD;
+    const offsetY = (Math.random() * 2 - 1) * DAMAGE_TEXT_SPREAD / 2;
+    const x = character.x + offsetX;
+    const y = character.y - character.radius - DAMAGE_TEXT_OFFSET_Y + offsetY;
+    this.effects.push(new FloatingText(x, y, String(Math.round(amount)), color));
+  }
+
+  /**
+   * 開始畫面震動 (start screen shake)
+   */
+  startShake() {
+    this.shakeTimer = SCREEN_SHAKE_DURATION;
+  }
+
+  /**
+   * 更新畫面震動：每幀隨機偏移，越接近結束晃得越小 (random offset that fades out)
+   * @param {number} dt 經過秒數
+   */
+  updateShake(dt) {
+    this.shakeTimer = Math.max(0, this.shakeTimer - dt);
+    // 剩下的時間比例 1 → 0，乘上去讓震動慢慢變小 (strength fades with remaining time)
+    const strength = SCREEN_SHAKE_STRENGTH * (this.shakeTimer / SCREEN_SHAKE_DURATION);
+    this.shakeX = (Math.random() * 2 - 1) * strength;
+    this.shakeY = (Math.random() * 2 - 1) * strength;
+  }
+
+  /**
+   * 更新所有特效，移除結束的 (update effects and remove finished ones)
+   * @param {number} dt 經過秒數
+   */
+  updateEffects(dt) {
+    for (const effect of this.effects) {
+      effect.update(dt);
+    }
+    this.effects = this.effects.filter((effect) => !effect.isDone());
+  }
+
+  /**
+   * 瞄準輔助：在玩家推的方向附近找一個看得到的敵人，把瞄準角度改成對準他 (aim assist)
+   * 條件：距離在 AIM_ASSIST_RANGE 內、角度差在 AIM_ASSIST_ANGLE 內、中間沒被擋住。
+   * 有好幾個符合時，選角度差最小的，也就是最接近玩家想瞄的那個。
+   */
+  applyAimAssist() {
+    let bestEnemy = null;
+    let bestDiff = AIM_ASSIST_ANGLE;
+
+    for (const enemy of this.enemies) {
+      const dx = enemy.x - this.player.x;
+      const dy = enemy.y - this.player.y;
+      if (Math.hypot(dx, dy) > AIM_ASSIST_RANGE) continue;
+
+      // 兩個角度相減後再用 atan2(sin, cos) 轉回 -π ~ π，才不會出現 350° 這種繞遠路的差 (wrap angle difference)
+      const enemyAngle = Math.atan2(dy, dx);
+      const raw = enemyAngle - input.aimAngle;
+      const diff = Math.abs(Math.atan2(Math.sin(raw), Math.cos(raw)));
+      if (diff > bestDiff) continue;
+
+      if (!this.map.hasLineOfSight(this.player.x, this.player.y, enemy.x, enemy.y)) continue;
+
+      bestEnemy = enemy;
+      bestDiff = diff;
+    }
+
+    if (bestEnemy !== null) {
+      input.aimAngle = Math.atan2(bestEnemy.y - this.player.y, bestEnemy.x - this.player.x);
+    }
   }
 
   /**
@@ -514,6 +654,10 @@ export class Game {
    * @param {CanvasRenderingContext2D} ctx 畫筆
    */
   draw(ctx) {
+    // 遊戲世界跟著畫面震動一起偏移；HUD 不動，才看得清楚 (shake the world, not the HUD)
+    ctx.save();
+    ctx.translate(this.shakeX, this.shakeY);
+
     this.map.draw(ctx);
 
     for (const ammo of this.ammoPickups) {
@@ -540,6 +684,10 @@ export class Game {
     for (const explosion of this.explosions) {
       explosion.draw(ctx);
     }
+    for (const effect of this.effects) {
+      effect.draw(ctx);
+    }
+    ctx.restore(); // 取消震動偏移，接下來畫 HUD (undo shake before the HUD)
 
     // ----- 依狀態畫最上層的介面 (UI layer by state) -----
     if (this.state === 'menu') {

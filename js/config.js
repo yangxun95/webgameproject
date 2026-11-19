@@ -122,7 +122,10 @@ export const HUD_STAGE_PANEL_WIDTH = 150;
 export const TOUCH_STICK_RADIUS = 60;        // 搖桿最多能推多遠，單位 px (max knob distance)
 export const TOUCH_KNOB_RADIUS = 24;         // 搖桿頭大小 (knob size)
 export const TOUCH_DEADZONE = 0.2;           // 推不到 20% 當作沒推，避免手指輕微晃動 (dead zone ratio)
-export const TOUCH_SLOT_PADDING = 8;         // 武器欄的觸控範圍往外多 8px，比較好點 (extra hit area)
+export const TOUCH_SLOT_PADDING = 8;
+// 瞄準輔助（只有手機）：推的方向附近有敵人，就自動對準他 (aim assist, touch only)
+export const AIM_ASSIST_ANGLE = 20 * Math.PI / 180; // 方向差 20° 以內才幫忙對準，換成弧度 (max angle, in radians)
+export const AIM_ASSIST_RANGE = 450;                 // 多遠以內的敵人才算 (max distance in px)         // 武器欄的觸控範圍往外多 8px，比較好點 (extra hit area)
 // 沒在推的時候，畫一個淡淡的搖桿提示在這裡 (hint position when the stick is idle)
 export const TOUCH_LEFT_HINT_X = 160;
 export const TOUCH_LEFT_HINT_Y = GAME_HEIGHT - 120;
@@ -163,7 +166,8 @@ export const HP_BAR_OFFSET = 8;           // 血條在身體上方幾 px (gap ab
 export const PLAYER_RADIUS = 12;          // 玩家圓形半徑，單位 px (radius)
 export const PLAYER_SPEED = 160;          // 移動速度，單位 px/秒 (pixels per second)
 export const PLAYER_COLOR = '#4fc3f7';
-export const PLAYER_MAX_HP = 100;         // 玩家最大血量 (max HP)
+export const PLAYER_MAX_HP = 150;         // 玩家最大血量 (max HP)
+export const STAGE_HEAL = 25;             // 每進入新的一關回復多少 HP (heal on entering a new stage)
 export const GUN_LENGTH = 20;             // 槍管長度，從圓心算起，單位 px (barrel length)
 export const GUN_WIDTH = 6;               // 槍管粗細 (barrel width)
 export const GUN_COLOR = '#cfd8dc';
@@ -247,6 +251,26 @@ export const WEAPONS = [
 // ===== 子彈與爆炸 (bullets & explosions) =====
 // 子彈每次最多前進幾 px 就檢查一次碰撞，避免高速子彈「穿過」牆或敵人 (sub-step size, prevents tunneling)
 export const BULLET_STEP_SIZE = 8;
+// ===== 打擊感 (game feel) =====
+export const SCREEN_SHAKE_DURATION = 0.2;    // 畫面震動幾秒 (shake duration)
+export const SCREEN_SHAKE_STRENGTH = 5;      // 最多偏移幾 px (max shake offset)
+export const KNOCKBACK_DISTANCE = 6;         // 敵人中彈被推開幾 px，BOSS 不會被推 (knockback; bosses are immune)
+// 被推開後隔多久才能再被推；不然加特林一秒 25 發會把敵人一路推走 (knockback cooldown, stops fast guns pinning enemies)
+export const KNOCKBACK_COOLDOWN = 0.15;
+export const DAMAGE_TEXT_DURATION = 0.6;     // 傷害數字顯示幾秒 (damage number lifetime)
+export const DAMAGE_TEXT_RISE_SPEED = 40;    // 每秒往上飄幾 px (rise speed)
+export const DAMAGE_TEXT_SPREAD = 14;        // 數字位置隨機偏移幾 px，霰彈同時打中好幾顆時才不會疊在一起 (random offset)
+export const DAMAGE_TEXT_OFFSET_Y = 14;      // 數字出現在頭頂再往上幾 px，避開血條 (start above the HP bar)
+export const DAMAGE_TEXT_COLOR = '#ffeb3b';         // 打中敵人的數字 (damage dealt)
+export const PLAYER_DAMAGE_TEXT_COLOR = '#ff5252';  // 玩家受傷的數字 (damage taken)
+export const DAMAGE_TEXT_OUTLINE_COLOR = '#212121';
+export const PARTICLE_DURATION = 0.45;       // 碎片存在幾秒 (particle lifetime)
+export const PARTICLE_SPEED = 160;           // 碎片噴出的速度 px/秒 (particle speed)
+export const PARTICLE_RADIUS = 3;
+export const PARTICLE_FRICTION = 0.05;       // 每秒速度剩下 5%，噴出去後很快停下 (velocity kept per second)
+export const DEATH_PARTICLE_COUNT = 14;      // 敵人死掉噴幾顆 (particles on enemy death)
+export const CRATE_PARTICLE_COUNT = 8;       // 箱子破掉噴幾顆 (particles on crate break)
+
 export const EXPLOSION_DURATION = 0.3;    // 爆炸畫面持續幾秒 (explosion visual duration)
 export const EXPLOSION_COLOR = 'rgba(255, 152, 0, 0.6)';
 
@@ -291,7 +315,7 @@ export const ENEMY_MIN_SPAWN_DISTANCE = 10; // 敵人至少離玩家出生點幾
 export const ENEMY_COUNT_MAX = 8;               // 敵人數量上限 (max enemies)
 export const ENEMY_COUNT_STAGES_PER_EXTRA = 2;  // 每過幾關多 1 個敵人 (stages per extra enemy)
 export const ENEMY_HP_GROWTH = 0.15;            // 每關血量 +15% (HP growth per stage)
-export const ENEMY_DAMAGE_GROWTH = 0.08;        // 每關子彈傷害 +8% (damage growth per stage)
+export const ENEMY_DAMAGE_GROWTH = 0.05;        // 每關子彈傷害 +5% (damage growth per stage)
 export const ENEMY_FIRE_RATE_GROWTH = 0.03;     // 每關開槍間隔 -3% (fire interval shrink per stage)
 export const ENEMY_MIN_FIRE_INTERVAL_RATIO = 0.5; // 開槍間隔最多縮短到原本的 50% (fire interval floor)
 // 血量上限 = 玩家最強武器的 DPS × 秒數，避免敵人變成打不死的 bullet sponge (HP cap by player DPS)

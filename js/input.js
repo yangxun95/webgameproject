@@ -401,10 +401,16 @@ function updateKeyboardMouseInput(player) {
  * 手機：左搖桿移動、右搖桿瞄準並自動射擊 (touch joysticks)
  */
 function updateTouchInput() {
-  // 左搖桿：推多少走多快，輕推就慢慢走 (analog: push lightly to walk slowly)
+  // 左搖桿：推過死區就全速走，只看方向不看推多遠 (past the dead zone = full speed, direction only)
+  // 除以 strength（推的長度）會把向量變成長度 1，就跟 WASD 一樣是全速 (normalize to length 1)
   const move = readStick(leftStick);
-  input.moveX = move.x;
-  input.moveY = move.y;
+  if (move.strength > 0) {
+    input.moveX = move.x / move.strength;
+    input.moveY = move.y / move.strength;
+  } else {
+    input.moveX = 0;
+    input.moveY = 0;
+  }
 
   // 右搖桿：有推就朝那個方向瞄準並開火；放開就停火，但保留方向 (push to aim & fire)
   const aim = readStick(rightStick);
