@@ -8,21 +8,24 @@ export const STORAGE_KEY_BEST_STAGE = 'webgameproject.bestStage';
 
 // ===== 畫面與地圖尺寸 (screen & map size) =====
 export const TILE_SIZE = 32;                        // 每一格的邊長，單位 px (tile size)
-export const MAP_COLS = 25;                         // 地圖有幾欄 (columns)
-export const MAP_ROWS = 19;                         // 地圖有幾列 (rows)
-export const GAME_WIDTH = TILE_SIZE * MAP_COLS;     // 邏輯寬度 = 800 (logical width)
-export const GAME_HEIGHT = TILE_SIZE * MAP_ROWS;    // 邏輯高度 = 608 (logical height)
+// 畫面做成長方形（寬:高 約 2.15:1），接近手機橫向螢幕，手機上東西才夠大 (wide map to fit landscape phones)
+export const MAP_COLS = 28;                         // 地圖有幾欄 (columns)
+export const MAP_ROWS = 13;                         // 地圖有幾列 (rows)
+export const GAME_WIDTH = TILE_SIZE * MAP_COLS;     // 邏輯寬度 = 896 (logical width)
+export const GAME_HEIGHT = TILE_SIZE * MAP_ROWS;    // 邏輯高度 = 416 (logical height)
 
 // ===== 地圖生成 (map generation) =====
-export const ROCK_COUNT = 30;             // 石頭數量 (number of rocks)
-export const CRATE_COUNT = 20;            // 箱子數量 (number of crates)
-export const TREE_COUNT = 25;             // 樹木數量 (number of trees)
-export const TRAP_COUNT = 8;              // 陷阱數量 (number of traps)
+// 數量跟著地圖面積調整（28×13 約是舊地圖 25×19 的 77%）(scaled with map area)
+export const ROCK_COUNT = 23;             // 石頭數量 (number of rocks)
+export const CRATE_COUNT = 15;            // 箱子數量 (number of crates)
+export const TREE_COUNT = 19;             // 樹木數量 (number of trees)
+export const TRAP_COUNT = 6;              // 陷阱數量 (number of traps)
 export const PLAYER_SPAWN_COL = 2;        // 玩家出生在第幾欄 (spawn column)
-export const PLAYER_SPAWN_ROW = 9;        // 玩家出生在第幾列 (spawn row)
+export const PLAYER_SPAWN_ROW = Math.floor(MAP_ROWS / 2); // 玩家出生在正中間那一列 = 6 (spawn row: middle)
 export const SAFE_ZONE_RADIUS = 2;        // 出生點周圍幾格內不放障礙物 (safe zone in tiles)
 export const MAP_GEN_MAX_ATTEMPTS = 100;  // 最多重新生成幾次 (max regeneration attempts)
-export const EXIT_COL = 22;               // 出口在第幾欄（列是隨機的）(exit column; row is random)
+// 出口離右邊緣 4 格，避開手機右下角的換彈、換槍按鈕 (exit column; keeps clear of the touch buttons)
+export const EXIT_COL = MAP_COLS - 4;     // 出口在第幾欄 = 24（列是隨機的）(exit column; row is random)
 export const EXIT_SAFE_RADIUS = 1;        // 出口周圍幾格內不放障礙物 (safe zone around exit)
 
 // ===== 關卡流程 (stage flow) =====
@@ -122,9 +125,9 @@ export const TOUCH_DEADZONE = 0.2;           // 推不到 20% 當作沒推，避
 export const TOUCH_SLOT_PADDING = 8;         // 武器欄的觸控範圍往外多 8px，比較好點 (extra hit area)
 // 沒在推的時候，畫一個淡淡的搖桿提示在這裡 (hint position when the stick is idle)
 export const TOUCH_LEFT_HINT_X = 160;
-export const TOUCH_LEFT_HINT_Y = 420;
+export const TOUCH_LEFT_HINT_Y = GAME_HEIGHT - 120;
 export const TOUCH_RIGHT_HINT_X = GAME_WIDTH - 220;
-export const TOUCH_RIGHT_HINT_Y = 420;
+export const TOUCH_RIGHT_HINT_Y = GAME_HEIGHT - 120;
 // 右下角的按鈕：換彈、換槍 (buttons at the bottom-right)
 export const RELOAD_BUTTON = { x: GAME_WIDTH - 60, y: GAME_HEIGHT - 60, radius: 36, label: '換彈' };
 export const SWITCH_BUTTON = { x: GAME_WIDTH - 60, y: GAME_HEIGHT - 150, radius: 30, label: '換槍' };
