@@ -1,7 +1,7 @@
 // 遊戲所有數值都集中在這裡，方便調整 (all game settings in one place)
 
 // ===== 遊戲資訊與存檔 (game info & save data) =====
-export const GAME_TITLE = 'ROGUE SHOOTER';          // 主選單標題，可以改成你們取的遊戲名稱 (menu title)
+export const GAME_TITLE = 'ROGUE SHOOTER';          // 主選單標題 (menu title)
 export const GAME_SUBTITLE = '資管三 C 網路程式設計期末專題'; // 主選單副標題 (menu subtitle)
 // localStorage 的 key：同一個網域下的網站共用 localStorage，加上專案名稱避免撞名 (storage key, prefixed)
 export const STORAGE_KEY_BEST_STAGE = 'webgameproject.bestStage';
@@ -92,7 +92,7 @@ export const BUFF_DURATION = 15;               // 暫時效果持續秒數 (buff
 export const ADRENALINE_SPEED_BONUS = 0.4;     // 腎上腺素：移動速度 +40% (speed bonus)
 export const POWER_AMMO_DAMAGE_BONUS = 0.5;    // 強化彈藥：傷害 +50% (damage bonus)
 export const LIFE_ESSENCE_MAX_HP = 10;         // 生命精華：最大 HP +10 (max HP bonus)
-export const QUICK_GLOVES_RELOAD_BONUS = 0.15; // 快手套：換彈速度 +15%，第 7 步換彈系統才會用到 (reload speed bonus)
+export const QUICK_GLOVES_RELOAD_BONUS = 0.15; // 快手套：換彈速度 +15% (reload speed bonus)
 
 // ===== 武器 HUD（左下角）(weapon HUD, bottom-left) =====
 export const HUD_MARGIN = 12;             // 離畫面邊緣幾 px (margin from screen edge)

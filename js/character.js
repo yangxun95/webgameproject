@@ -92,7 +92,7 @@ export class Character {
     }
   }
 
-  // ===== 移動與碰撞（第 3 步的程式搬到這裡共用）(movement & collision) =====
+  // ===== 移動與碰撞 (movement & collision) =====
 
   /**
    * 碰撞用的方框：把圓形當成正方形處理 (hitbox as a square)

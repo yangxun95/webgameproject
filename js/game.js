@@ -661,7 +661,6 @@ export class Game {
    */
   tryDropAmmo(x, y, chance) {
     if (!this.player.needsAmmo()) return;
-    // Math.random() < 0.4 的機率剛好是 40% (random() < chance happens with that probability)
     if (Math.random() < chance) {
       this.ammoPickups.push(new AmmoPickup(x, y));
     }
