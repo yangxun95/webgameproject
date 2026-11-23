@@ -15,12 +15,10 @@ export const GAME_WIDTH = TILE_SIZE * MAP_COLS;     // 邏輯寬度 = 896 (logic
 export const GAME_HEIGHT = TILE_SIZE * MAP_ROWS;    // 邏輯高度 = 416 (logical height)
 
 // ===== 地圖生成 (map generation) =====
-// 石頭和箱子成群出現，組成掩體；樹木和陷阱零散點綴 (rocks & crates form cover clusters; trees & traps are scattered)
-export const ROCK_CLUSTER_COUNT = 5;      // 幾堆石頭 (number of rock clusters)
-export const ROCK_CLUSTER_SIZE = 5;       // 每堆最多幾顆石頭 (max rocks per cluster)
-export const CRATE_CLUSTER_COUNT = 4;     // 幾堆箱子 (number of crate clusters)
-export const CRATE_CLUSTER_SIZE = 4;      // 每堆最多幾個箱子 (max crates per cluster)
-export const TREE_COUNT = 10;             // 樹木數量 (number of trees)
+// 每張地圖隨機放置的物件數量 (number of objects placed on each map)
+export const ROCK_COUNT = 23;             // 石頭數量 (number of rocks)
+export const CRATE_COUNT = 15;            // 箱子數量 (number of crates)
+export const TREE_COUNT = 19;             // 樹木數量 (number of trees)
 export const TRAP_COUNT = 6;              // 陷阱數量 (number of traps)
 export const PLAYER_SPAWN_COL = 2;        // 玩家出生在第幾欄 (spawn column)
 export const PLAYER_SPAWN_ROW = Math.floor(MAP_ROWS / 2); // 玩家出生在正中間那一列 = 6 (spawn row: middle)

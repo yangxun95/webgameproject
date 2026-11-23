@@ -2,10 +2,8 @@ import {
   TILE_SIZE,
   MAP_COLS,
   MAP_ROWS,
-  ROCK_CLUSTER_COUNT,
-  ROCK_CLUSTER_SIZE,
-  CRATE_CLUSTER_COUNT,
-  CRATE_CLUSTER_SIZE,
+  ROCK_COUNT,
+  CRATE_COUNT,
   TREE_COUNT,
   TRAP_COUNT,
   PLAYER_SPAWN_COL,
@@ -89,8 +87,8 @@ export class GameMap {
       this.exitRow = randomInt(MAP_ROWS - 2) + 1;
 
       this.fillEmpty();
-      this.placeCluster('rock', ROCK_CLUSTER_COUNT, ROCK_CLUSTER_SIZE);
-      this.placeCluster('crate', CRATE_CLUSTER_COUNT, CRATE_CLUSTER_SIZE);
+      this.placeRandom('rock', ROCK_COUNT);
+      this.placeRandom('crate', CRATE_COUNT);
       this.placeRandom('tree', TREE_COUNT);
       this.placeRandom('trap', TRAP_COUNT);
 
@@ -145,39 +143,6 @@ export class GameMap {
         this.crateHp[row][col] = CRATE_HP;
       }
       placed++;
-    }
-  }
-
-  /**
-   * 放幾堆「連在一起」的物件當掩體，例如一排石牆、一堆箱子 (place clusters of objects as cover)
-   * 做法：隨機挑一個起點，然後每放一個就往上下左右隨機走一步，走過的格子連成一塊。
-   * 走到重複或不能放的格子就略過，所以每堆最多 clusterSize 個。
-   * @param {string} type tile 種類，例如 'rock'
-   * @param {number} clusterCount 要放幾堆
-   * @param {number} clusterSize 每堆最多幾格
-   */
-  placeCluster(type, clusterCount, clusterSize) {
-    for (let i = 0; i < clusterCount; i++) {
-      let col = randomInt(MAP_COLS);
-      let row = randomInt(MAP_ROWS);
-
-      for (let step = 0; step < clusterSize; step++) {
-        const canPlace =
-          this.isInside(col, row) &&
-          this.tiles[row][col] === 'empty' &&
-          !this.isInSafeZone(col, row);
-        if (canPlace) {
-          this.tiles[row][col] = type;
-          if (type === 'crate') {
-            this.crateHp[row][col] = CRATE_HP;
-          }
-        }
-
-        // 隨機往上下左右其中一個方向走一格 (random step to a neighbor)
-        const dir = DIRECTIONS[randomInt(DIRECTIONS.length)];
-        col += dir.dCol;
-        row += dir.dRow;
-      }
     }
   }
 
