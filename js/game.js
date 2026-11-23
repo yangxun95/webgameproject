@@ -299,7 +299,7 @@ export class Game {
   }
 
   /**
-   * 遊戲中的更新 (update while playing)
+   * 遊戲中的更新：每一幀依序處理移動、戰鬥、掉落、撿東西、關卡進度 (update while playing)
    * @param {number} dt 經過秒數
    */
   updatePlaying(dt) {
@@ -311,41 +311,60 @@ export class Game {
       this.applyAimAssist();
     }
     this.player.update(dt, input, this.bullets, this.map);
-
     for (const enemy of this.enemies) {
       enemy.update(dt, this.player, this.bullets, this.map);
     }
-
     this.updateBullets(dt);
-
     for (const explosion of this.explosions) {
       explosion.update(dt);
     }
 
-    // 玩家受傷：畫面震動 + 紅色數字 (player got hurt: shake + red number)
     const healthLost = healthBefore - (this.player.hp + this.player.armor);
     if (healthLost > 0) {
       this.startShake();
       this.addDamageText(this.player, healthLost, PLAYER_DAMAGE_TEXT_COLOR);
     }
 
-    // 移除前先記下死掉敵人的位置，道具要掉在這裡；也有機率掉彈藥 (enemy deaths: remember position, maybe drop ammo)
-    for (const enemy of this.enemies) {
-      if (enemy.isDead()) {
-        this.lastEnemyDeathX = enemy.x;
-        this.lastEnemyDeathY = enemy.y;
-        this.tryDropAmmo(enemy.x, enemy.y, ENEMY_AMMO_DROP_CHANCE);
-        // 噴出跟敵人同顏色的碎片 (burst of particles in the enemy's color)
-        this.effects.push(...createBurst(enemy.x, enemy.y, enemy.color, DEATH_PARTICLE_COUNT));
+    this.handleEnemyDeaths();
+    this.handleBrokenCrates();
+    this.handlePickups();
+    this.removeFinishedObjects();
 
-        // instanceof：檢查這個物件是不是 Boss 這個 class 建立的 (is this enemy a Boss?)
-        if (enemy instanceof Boss) {
-          this.bossReward = new BossReward(enemy.x, enemy.y, this.getBossNumber());
-        }
-      }
+    // 玩家死亡就切到死亡畫面，這一幀後面都不用做了 (player died: switch state and stop here)
+    if (this.player.isDead()) {
+      this.state = 'dead';
+      this.deadTimer = 0;
+      this.messageTimer = 0; // 收掉提示文字，免得跟 GAME OVER 疊在一起 (hide message)
+      return;
     }
 
-    // 被打破的箱子：先抽回血藥，沒抽中才抽彈藥，讀完就清空清單 (broken crates: potion first, else maybe ammo)
+    this.checkStageProgress();
+  }
+
+  /**
+   * 處理這一幀死掉的敵人：記下位置、可能掉彈藥、噴碎片，BOSS 掉獎勵 (handle enemies that died this frame)
+   * 要在 removeFinishedObjects() 之前呼叫，不然死掉的敵人已經被移除了。
+   */
+  handleEnemyDeaths() {
+    for (const enemy of this.enemies) {
+      if (!enemy.isDead()) continue;
+
+      // 清關道具會掉在最後一個倒下的敵人位置 (the stage item drops where the last enemy died)
+      this.lastEnemyDeathX = enemy.x;
+      this.lastEnemyDeathY = enemy.y;
+      this.tryDropAmmo(enemy.x, enemy.y, ENEMY_AMMO_DROP_CHANCE);
+      this.effects.push(...createBurst(enemy.x, enemy.y, enemy.color, DEATH_PARTICLE_COUNT));
+
+      if (enemy instanceof Boss) {
+        this.bossReward = new BossReward(enemy.x, enemy.y, this.getBossNumber());
+      }
+    }
+  }
+
+  /**
+   * 處理這一幀被打破的箱子：先抽回血藥，沒抽中才抽彈藥 (handle crates broken this frame)
+   */
+  handleBrokenCrates() {
     for (const crate of this.map.brokenCrates) {
       this.effects.push(...createBurst(crate.x, crate.y, CRATE_COLOR, CRATE_PARTICLE_COUNT));
       if (Math.random() < CRATE_POTION_DROP_CHANCE) {
@@ -354,9 +373,14 @@ export class Game {
         this.tryDropAmmo(crate.x, crate.y, CRATE_AMMO_DROP_CHANCE);
       }
     }
+    // 讀完就清空，下一幀才不會重複處理 (clear so they're handled only once)
     this.map.brokenCrates = [];
+  }
 
-    // 撿彈藥 (pick up ammo)
+  /**
+   * 撿地上的彈藥和回血藥 (pick up ammo and potions)
+   */
+  handlePickups() {
     for (const ammo of this.ammoPickups) {
       if (circlesOverlap(this.player, ammo)) {
         this.player.addAmmoToAll(AMMO_PICKUP_RATIO);
@@ -364,7 +388,7 @@ export class Game {
       }
     }
 
-    // 撿回血藥：血沒滿才撿，滿血時留在地上之後再回來撿 (pick up potion only when hurt)
+    // 血沒滿才撿，滿血時留在地上，之後受傷再回來撿 (only pick up potions when hurt)
     for (const potion of this.potions) {
       if (circlesOverlap(this.player, potion) && this.player.hp < this.player.maxHp) {
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + POTION_HEAL);
@@ -372,49 +396,45 @@ export class Game {
         this.showMessage(`回血藥：回復 ${POTION_HEAL} HP`);
       }
     }
+  }
 
-    // 清除死掉的子彈、敵人、結束的爆炸、撿走的彈藥和回血藥 (remove finished objects)
+  /**
+   * 把死掉的子彈、敵人、結束的爆炸、撿走的東西從陣列移除 (remove finished objects)
+   */
+  removeFinishedObjects() {
     this.bullets = this.bullets.filter((bullet) => bullet.alive);
     this.enemies = this.enemies.filter((enemy) => !enemy.isDead());
     this.explosions = this.explosions.filter((explosion) => !explosion.isDone());
     this.ammoPickups = this.ammoPickups.filter((ammo) => !ammo.pickedUp);
     this.potions = this.potions.filter((potion) => !potion.pickedUp);
+  }
 
-    // ----- 玩家死亡 (player died) -----
-    if (this.player.isDead()) {
-      this.state = 'dead';
-      this.deadTimer = 0;
-      this.messageTimer = 0; // 收掉提示文字，免得跟 GAME OVER 疊在一起 (hide message)
-      return;
-    }
-
-    // ----- 清關：敵人全滅 → 在最後一個敵人倒下的位置掉落道具 (stage clear: drop an item) -----
+  /**
+   * 關卡進度：敵人全滅 → 掉道具 → 撿起道具和 BOSS 獎勵 → 出口開啟 → 走進出口進下一關 (stage progress)
+   */
+  checkStageProgress() {
     if (this.enemies.length === 0 && !this.stageCleared) {
       this.stageCleared = true;
       this.item = createRandomItem(this.lastEnemyDeathX, this.lastEnemyDeathY);
       this.showMessage('敵人全滅！撿起道具');
     }
 
-    // ----- 撿起道具 → 套用效果 (pick up item) -----
     if (this.item !== null && circlesOverlap(this.player, this.item)) {
       applyItem(this.item.type, this.player);
       this.showMessage(this.item.getPickupText());
       this.item = null;
     }
 
-    // ----- 撿起 BOSS 獎勵：新武器或補給箱 (pick up boss reward) -----
     if (this.bossReward !== null && circlesOverlap(this.player, this.bossReward)) {
       this.showMessage(this.bossReward.apply(this.player));
       this.bossReward = null;
     }
 
-    // ----- 開啟出口：已清關，而且道具和 BOSS 獎勵都撿完了 (open exit when everything is picked up) -----
-    // BOSS 獎勵也要撿才開，避免玩家不小心錯過新武器 (so the player can't miss the new weapon)
+    // BOSS 獎勵也要撿才開出口，避免玩家不小心錯過新武器 (exit opens only after everything is picked up)
     if (this.stageCleared && this.item === null && this.bossReward === null && !this.map.exitOpen) {
       this.map.openExit();
     }
 
-    // ----- 走進開啟的出口：進入下一關 (enter the open exit: next stage) -----
     if (this.map.exitOpen && this.map.isAtExit(this.player.x, this.player.y)) {
       this.stage++;
       this.loadStage();
