@@ -43,7 +43,7 @@ function drawImageCentered(ctx, image, x, y, size) {
   ctx.drawImage(image, x - size / 2, y - size / 2, size, size);
 }
 
-// 六種輔助道具的資料表，對應 AGENTS.md 的道具表格 (item definitions)
+// 六種輔助道具的資料表 (item definitions)
 // label：畫在道具上的字；name：道具名稱；description：撿到時顯示的說明
 const ITEM_TYPES = {
   medkit: {
@@ -324,7 +324,7 @@ export function applyItem(type, player) {
     player.maxHp += LIFE_ESSENCE_MAX_HP;
     player.hp += LIFE_ESSENCE_MAX_HP;
   } else if (type === 'quickGloves') {
-    // 永久：換彈速度倍率增加，第 7 步換彈時使用 (permanent reload speed up)
+    // 永久：換彈速度倍率增加 (permanent reload speed up)
     player.reloadSpeedMultiplier += QUICK_GLOVES_RELOAD_BONUS;
   }
 }

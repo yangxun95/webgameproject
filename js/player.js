@@ -20,7 +20,6 @@ export class Player extends Character {
    * @param {number} y 起始 y 座標 (start y)
    */
   constructor(x, y) {
-    // super(...) 呼叫父類別的 constructor，把共同的屬性設定好 (call parent constructor)
     super(x, y, PLAYER_RADIUS, PLAYER_SPEED, PLAYER_MAX_HP, PLAYER_COLOR);
     this.imageName = 'player';
 
@@ -55,7 +54,7 @@ export class Player extends Character {
   }
 
   /**
-   * 取得一把新武器；已經有的話就補滿彈藥（第 8 步 BOSS 掉落時使用）(give a weapon)
+   * 取得一把新武器；已經有的話就補滿彈藥，BOSS 掉落時使用 (give a weapon)
    * @param {number} index WEAPONS 中的位置
    */
   giveWeapon(index) {

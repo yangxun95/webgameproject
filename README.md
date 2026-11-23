@@ -1,4 +1,4 @@
-# ROGUE SHOOTER
+# 2D Shooting Game
 
 資管系三年級 C 班「網路程式設計」期末專題：一款 2D 俯視角、單機 roguelike 射擊遊戲，電腦和手機瀏覽器都能玩。
 
@@ -7,6 +7,8 @@
 **https://yangxun95.github.io/webgameproject/**
 
 手機請**轉成橫向**遊玩。
+
+![遊戲畫面](docs/screenshot.png)
 
 ## 遊戲規則
 
@@ -40,6 +42,14 @@ python -m http.server 8000
 
 - 原生 JavaScript（ES Modules）+ HTML5 Canvas 2D，沒有使用任何框架、遊戲引擎或建置工具。
 - 部署在 GitHub Pages（純靜態網站）。
+
+## 開發方式
+
+這個專案由開發者與 AI coding agent（Claude Code）協作完成：
+
+- **規格與規則由我們訂**：遊戲玩法、武器與道具設計、操作方式、技術限制（不用框架、不用 build tool）都寫在 `AGENTS.md`，AI 必須照著做。
+- **小步前進**：每次只做一個功能，做完先在電腦和手機上實際試玩驗證，才 commit 並開 Pull Request 合併。
+- **邊做邊學**：AI 每做完一步都要逐段講解程式碼與觀念，所以程式裡的註解都是中英並列，方便我們自己讀懂與報告。
 
 ## 專案文件
 

@@ -29,7 +29,7 @@ import {
 } from './config.js';
 import { getImage } from './assets.js';
 
-// 每一種 tile 的特性，對應 AGENTS.md 的地圖表格 (tile properties)
+// 每一種 tile 的特性 (tile properties)
 // blocksMovement：會不會擋住移動；blocksBullet：會不會擋住子彈
 const TILE_PROPS = {
   empty: { blocksMovement: false, blocksBullet: false },

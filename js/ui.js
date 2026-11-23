@@ -346,12 +346,13 @@ export function drawWeaponHud(ctx, player) {
     ctx.fillText('沒有彈藥！', statusX, statusY);
   }
 
-  // ----- 8 格武器欄 (8 weapon slots) -----
+  // ----- 武器欄：只畫已取得的武器，格子位置固定，按 N 永遠是第 N 把 (owned weapon slots only) -----
   for (let i = 0; i < WEAPONS.length; i++) {
     const slot = getWeaponSlotRect(i);
     const owned = player.weapons[i] !== null;
+    if (!owned) continue; // 還沒拿到的武器不顯示 (skip weapons not owned yet)
 
-    ctx.fillStyle = owned ? HUD_SLOT_OWNED_COLOR : HUD_SLOT_EMPTY_COLOR;
+    ctx.fillStyle = HUD_SLOT_OWNED_COLOR;
     ctx.fillRect(slot.x, slot.y, slot.size, slot.size);
 
     // 目前的武器加上黃色外框 (highlight current weapon)
@@ -362,7 +363,7 @@ export function drawWeaponHud(ctx, player) {
     }
 
     // 格子裡寫數字鍵 1~8 (number key label)
-    ctx.fillStyle = owned ? HUD_TEXT_COLOR : HUD_SUBTEXT_COLOR;
+    ctx.fillStyle = HUD_TEXT_COLOR;
     setText(ctx, 'bold 12px sans-serif', 'center', 'middle');
     ctx.fillText(`${i + 1}`, slot.x + slot.size / 2, slot.y + slot.size / 2 + 1);
   }
