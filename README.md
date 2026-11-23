@@ -1,4 +1,4 @@
-# ROGUE SHOOTER
+# 2D Shooting Game
 
 資管系三年級 C 班「網路程式設計」期末專題：一款 2D 俯視角、單機 roguelike 射擊遊戲，電腦和手機瀏覽器都能玩。
 

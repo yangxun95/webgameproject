@@ -1,7 +1,7 @@
 // 遊戲所有數值都集中在這裡，方便調整 (all game settings in one place)
 
 // ===== 遊戲資訊與存檔 (game info & save data) =====
-export const GAME_TITLE = 'ROGUE SHOOTER';          // 主選單標題 (menu title)
+export const GAME_TITLE = '2D Shooting Game';       // 主選單標題 (menu title)
 export const GAME_SUBTITLE = '資管三 C 網路程式設計期末專題'; // 主選單副標題 (menu subtitle)
 // localStorage 的 key：同一個網域下的網站共用 localStorage，加上專案名稱避免撞名 (storage key, prefixed)
 export const STORAGE_KEY_BEST_STAGE = 'webgameproject.bestStage';
